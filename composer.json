@@ -1,0 +1,23 @@
+{
+    "name": "goaop/goaop-laravel-bridge",
+    "description": "Integration bridge for Go! AOP framework",
+    "type": "library",
+    "keywords": ["bridge", "laravel", "aop", "php", "aspect"],
+    "require": {
+        "goaop/framework": "^1.0|^2.0@dev",
+        "laravel/framework": "^5.0"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Lisachenko Alexander",
+            "email": "lisachenko.it@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Go\\Laravel\\GoAopBridge\\": "./src"
+        }
+    }
+}
