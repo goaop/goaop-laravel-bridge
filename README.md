@@ -1,6 +1,7 @@
 GoAopBridge
 ==============
 
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/goaop/goaop-laravel-bridge/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/goaop/goaop-laravel-bridge/?branch=master)
 [![GitHub release](https://img.shields.io/github/release/goaop/goaop-laravel-bridge.svg)](https://github.com/goaop/goaop-laravel-bridge/releases/latest)
 [![Minimum PHP Version](http://img.shields.io/badge/php-%3E%3D%205.5-8892BF.svg)](https://php.net/)
 [![License](https://img.shields.io/packagist/l/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
