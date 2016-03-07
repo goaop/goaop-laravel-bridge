@@ -20,7 +20,7 @@ AOP defines new instruments for developers, they are:
  * Advice is an additional callback that will be called before, after or around concrete joinpoint. For PHP each advice is represented as a `\Closure` instance, wrapped into the interceptor object.
  * Aspect is a special class that combines pointcuts and advices together, each pointcut is defined as an annotation and each advice is a method inside this aspect.
  
- You can read more about AOP in different sources, there are good articles for Java language and they can be applied for PHP too, because it's general paradigm.
+ You can read more about AOP in different sources, there are good articles for Java language and they can be applied for PHP too, because it's general paradigm. Alternatively, you can watch a [nice presentation about AOP in Laravel](http://slides.com/chrisflynn-1/aspect-oriented-architecture-in-laravel)
 
 Installation
 ------------
