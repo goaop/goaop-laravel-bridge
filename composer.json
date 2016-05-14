@@ -4,7 +4,7 @@
     "type": "library",
     "keywords": ["bridge", "laravel", "aop", "php", "aspect"],
     "require": {
-        "goaop/framework": "^1.0|^2.0@dev",
+        "goaop/framework": "^1.0|^2.0",
         "laravel/framework": "^5.0"
     },
     "license": "MIT",
@@ -14,7 +14,6 @@
             "email": "lisachenko.it@gmail.com"
         }
     ],
-    "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
             "Go\\Laravel\\GoAopBridge\\": "./src"
