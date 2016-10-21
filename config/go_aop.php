@@ -48,7 +48,7 @@ return [
      |
      | If configured then will be used as cache file mode for chmod
      */
-    'cacheFileMode' => null,
+    'cacheFileMode' => 511,
 
     /*
      |--------------------------------------------------------------------------
