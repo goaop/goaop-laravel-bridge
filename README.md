@@ -92,7 +92,8 @@ return [
      | Cache file mode
      |--------------------------------------------------------------------------
      |
-     | If configured then will be used as cache file mode for chmod
+     | If configured then will be used as cache file mode for chmod.
+     | WARNING! Use only integers here, not a string, e.g. 0770 instead of '0770'
      */
     'cacheFileMode' => null,
 
