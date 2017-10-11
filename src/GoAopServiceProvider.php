@@ -13,7 +13,6 @@ namespace Go\Laravel\GoAopBridge;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -55,7 +54,7 @@ class GoAopServiceProvider extends ServiceProvider
             return $aspectKernel;
         });
 
-        $this->app->singleton(AspectContainer::class, function (Application $app) {
+        $this->app->singleton(AspectContainer::class, function ($app) {
             /** @var AspectKernel $kernel */
             $kernel = $app->make(AspectKernel::class);
 

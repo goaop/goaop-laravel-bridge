@@ -68,7 +68,7 @@ return [
      | leave it empty if you want AOP to be applied to all files in the appDir
      */
     'includePaths' => [
-        app_path()
+        app('path')
     ],
 
     /*
