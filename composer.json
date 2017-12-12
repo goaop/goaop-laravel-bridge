@@ -18,5 +18,12 @@
         "psr-4": {
             "Go\\Laravel\\GoAopBridge\\": "./src"
         }
-    }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Go\\Laravel\\GoAopBridge\\GoAopServiceProvider"
+            ]
+        }
+    },
 }
