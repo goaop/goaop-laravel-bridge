@@ -25,5 +25,5 @@
                 "Go\\Laravel\\GoAopBridge\\GoAopServiceProvider"
             ]
         }
-    },
+    }
 }
