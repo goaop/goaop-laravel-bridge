@@ -31,6 +31,7 @@ GoAopBridge can be easily installed with composer. Just ask a composer to downlo
 $ composer require goaop/goaop-laravel-bridge
 ```
 
+### Setup Laravel
 Add the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to your config/app.php `providers` array:
 ```php
 // config/app.php
@@ -41,13 +42,34 @@ Add the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to your config/app.php `pr
 ```
 Make sure that this service provider is the **first item** in this list. This is required for the AOP engine to work correctly.
 
+### Setup Lumen
+Register the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to the app in your bootstrap/app.php:
+```php
+// bootstrap/app.php
+<?php
+// After `$app` is created
+
+$app->register(\Go\Laravel\GoAopBridge\GoAopServiceProvider::class);
+```
+Make sure that this service provider is the **first** call to `$app->register()`. This is required for the AOP engine to work correctly.
+
 Configuration
 -------------
 
-The default configuration in the `config/go_aop.php` file. Copy this file to your own config directory to modify the values. You can also publish the config using this command: 
+The default configuration in the `config/go_aop.php` file. If you want to change any of the default values you have to copy this file to your own config directory to modify the values. 
 
+If you use Laravel, you **can** also publish the config using this command:
 ```bash
 ./artisan vendor:publish --provider="Go\Laravel\GoAopBridge\GoAopServiceProvider"
+```
+
+If you use Lumen, you **have** to manually load the config file, example:
+```php
+// bootstrap/app.php
+<?php
+// After `$app` is created
+
+$app->configure('go_aop');
 ```
 
 Configuration can be used for additional tuning of AOP kernel and source code whitelistsing/blacklisting.
@@ -115,7 +137,7 @@ return [
      | leave it empty if you want AOP to be applied to all files in the appDir
      */
     'includePaths' => [
-        app_path()
+        app('path')
     ],
 
     /*
