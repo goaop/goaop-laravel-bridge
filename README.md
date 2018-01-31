@@ -31,8 +31,14 @@ GoAopBridge can be easily installed with composer. Just ask a composer to downlo
 $ composer require goaop/goaop-laravel-bridge
 ```
 
-### Setup Laravel
+### Laravel 5.5+
+
+No action is needed. After the command `composer require goaop/goaop-laravel-bridge` the package is installed and configured automatically. For a manual configuration, [follow these steps](#configuration).
+
+### Laravel 5.4 or less
+
 Add the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to your config/app.php `providers` array:
+
 ```php
 // config/app.php
 
@@ -40,10 +46,15 @@ Add the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to your config/app.php `pr
         // Go! Aspect Service Provider
         Go\Laravel\GoAopBridge\GoAopServiceProvider::class,
 ```
+
 Make sure that this service provider is the **first item** in this list. This is required for the AOP engine to work correctly.
 
-### Setup Lumen
+
+
+### Lumen
+
 Register the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to the app in your bootstrap/app.php:
+
 ```php
 // bootstrap/app.php
 <?php
@@ -51,6 +62,7 @@ Register the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to the app in your bo
 
 $app->register(\Go\Laravel\GoAopBridge\GoAopServiceProvider::class);
 ```
+
 Make sure that this service provider is the **first** call to `$app->register()`. This is required for the AOP engine to work correctly.
 
 Configuration
