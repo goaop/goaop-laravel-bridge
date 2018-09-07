@@ -2,8 +2,9 @@
     "name": "goaop/goaop-laravel-bridge",
     "description": "Integration bridge for Go! AOP framework",
     "type": "library",
-    "keywords": ["bridge", "laravel", "aop", "php", "aspect"],
+    "keywords": ["bridge", "laravel", "lumen", "aop", "php", "aspect"],
     "require": {
+        "php": ">=5.5.0",
         "goaop/framework": "^1.0|^2.0",
         "illuminate/support": "^5.0"
     },
@@ -18,6 +19,14 @@
         "psr-4": {
             "Go\\Laravel\\GoAopBridge\\": "./src"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Go\\Laravel\\GoAopBridge\\Tests\\": "./tests"
+        }
+    },
+    "config": {
+        "sort-packages": true
     },
     "extra": {
         "laravel": {
