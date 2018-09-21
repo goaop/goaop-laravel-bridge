@@ -44,12 +44,12 @@ class GoAopServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->publishes([$this->configPath() => config_path('go_aop.php')]);
+        $this->publishes([$this->configPath() => $this->appConfigPath('go_aop.php')]);
         $this->mergeConfigFrom($this->configPath(), 'go_aop');
 
         $this->app->singleton(AspectKernel::class, function () {
             $aspectKernel = AspectLaravelKernel::getInstance();
-            $aspectKernel->init(config('go_aop'));
+            $aspectKernel->init($this->app['config']->get('go_aop'));
 
             return $aspectKernel;
         });
@@ -78,5 +78,24 @@ class GoAopServiceProvider extends ServiceProvider
     private function configPath()
     {
         return __DIR__ . '/../config/go_aop.php';
+    }
+
+    private function appConfigPath($path = '')
+    {
+        if (function_exists('config_path')) {
+            // Pass on to Laravel functionality
+            return config_path($path);
+        }
+
+        $config_path = null;
+        if (method_exists($this->app, 'getConfigurationPath')) {
+            $config_path = $this->app->getConfigurationPath() . $path;
+        }
+
+        if (! $config_path) {
+            $config_path = $this->app->basePath() . '/config/';
+        }
+
+        return $config_path . $path;
     }
 }
