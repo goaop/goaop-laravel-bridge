@@ -99,7 +99,7 @@ return [
     */
 
     'includePaths' => [
-        app_path()
+        app()->path()
     ],
 
     /*
@@ -116,7 +116,7 @@ return [
     */
 
     'excludePaths' => [
-        app_path('Exceptions')
+        app()->path() . '/Exceptions'
     ],
 
     /*
