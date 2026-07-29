@@ -11,6 +11,19 @@
 
 Integration bridge for the [Go! AOP framework](https://github.com/goaop/framework) and Laravel. It boots the AOP engine early in the application lifecycle so aspects are woven into your classes transparently — no code generation steps, no manual proxies.
 
+## Why Aspect-Oriented Programming in Laravel?
+
+Some logic doesn't belong to any single class, yet ends up copied into hundreds of them: logging, caching, metrics, transactions, authorization checks, rate limiting, retry policies. Laravel's middleware solves this for HTTP requests — AOP solves it for **any method in your codebase**. Define the behavior once as an aspect, declare *where* it applies with a pointcut expression, and the engine weaves it in automatically. Your services stay pure business logic.
+
+### ✨ Highlights
+
+- 🪡 **Transparent weaving** — aspects are applied by transforming classes at load time. No base classes to extend, no interfaces to implement, no `Proxy` wrappers to maintain, no changes to how you `new` or inject your services.
+- 🏷️ **Modern PHP 8 attributes** — advices are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]` right on your aspect methods, with a powerful regexp-like pointcut syntax (`execution(public App\Services\**->*(*))`).
+- 🧩 **Laravel-native integration** — package auto-discovery, publishable config, aspects resolved through the container (constructor DI works), registration via a simple config list or the `goaop.aspect` service tag, `php artisan about` support.
+- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup`; with `debug` off the woven code is served straight from cache and plays nicely with opcache.
+- 🔬 **Pure PHP, no magic runtime** — built on Go! AOP 4.x: no PECL extensions, no `eval()`, all transformations produce reviewable static PHP files.
+- ✅ **Proven by tests** — the bridge ships with end-to-end weaving tests (advice execution, `Around` return rewriting, cache generation) running against Laravel 12 and 13 on PHP 8.4.
+
 ## Requirements
 
 - PHP >= 8.4
