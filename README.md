@@ -1,259 +1,152 @@
-GoAopBridge
-==============
+# Go! AOP Laravel bridge
 
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/goaop/goaop-laravel-bridge/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/goaop/goaop-laravel-bridge/?branch=master)
+[![CI](https://github.com/goaop/goaop-laravel-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/goaop/goaop-laravel-bridge/actions/workflows/ci.yml)
+![PHPStan Badge](https://img.shields.io/badge/PHPStan-level%206-brightgreen.svg?style=flat&link=https%3A%2F%2Fphpstan.org%2Fuser-guide%2Frule-levels)
 [![GitHub release](https://img.shields.io/github/release/goaop/goaop-laravel-bridge.svg)](https://github.com/goaop/goaop-laravel-bridge/releases/latest)
-[![Minimum PHP Version](http://img.shields.io/badge/php-%3E%3D%205.5-8892BF.svg)](https://php.net/)
+[![Total Downloads](https://img.shields.io/packagist/dt/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
+[![Monthly Downloads](https://img.shields.io/packagist/dm/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
+[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%208.4-8892BF.svg)](https://www.php.net/supported-versions.php)
 [![License](https://img.shields.io/packagist/l/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
+[![Sponsor](https://img.shields.io/badge/Sponsor-❤️-lightgray?style=flat&logo=github)](https://github.com/sponsors/lisachenko)
 
-The GoAopBridge adds support for Aspect-Oriented Programming via Go! AOP Framework for Laravel5 applications.
+Integration bridge for the [Go! AOP framework](https://github.com/goaop/framework) and Laravel. It boots the AOP engine early in the application lifecycle so aspects are woven into your classes transparently — no code generation steps, no manual proxies.
 
-Overview
---------
+## Why Aspect-Oriented Programming in Laravel?
 
-Aspect-Oriented Paradigm allows to extend the standard Object-Oriented Paradigm with special instruments for effective solving of cross-cutting concerns in your application. This code is typically present everywhere in your application (for example, logging, caching, monitoring, etc) and there is no easy way to fix this without AOP.
+Some logic doesn't belong to any single class, yet ends up copied into hundreds of them: logging, caching, metrics, transactions, authorization checks, rate limiting, retry policies. Laravel's middleware solves this for HTTP requests — AOP solves it for **any method in your codebase**. Define the behavior once as an aspect, declare *where* it applies with a pointcut expression, and the engine weaves it in automatically. Your services stay pure business logic.
 
-AOP defines new instruments for developers, they are:
+### ✨ Highlights
 
- * Joinpoint - place in your code that can be used for interception, for example, execution of single public method or accessing of single object property.
- * Pointcut is a list of joinpoints defined with a special regexp-like expression for your source code, for example, all public and protected methods in the concrete class or namespace.
- * Advice is an additional callback that will be called before, after or around concrete joinpoint. For PHP each advice is represented as a `\Closure` instance, wrapped into the interceptor object.
- * Aspect is a special class that combines pointcuts and advices together, each pointcut is defined as an annotation and each advice is a method inside this aspect.
- 
- You can read more about AOP in different sources, there are good articles for Java language and they can be applied for PHP too, because it's general paradigm. Alternatively, you can watch a [nice presentation about AOP in Laravel](http://slides.com/chrisflynn-1/aspect-oriented-architecture-in-laravel)
+- 🪡 **Transparent weaving** — aspects are applied by transforming classes at load time. No base classes to extend, no interfaces to implement, no `Proxy` wrappers to maintain, no changes to how you `new` or inject your services.
+- 🏷️ **Modern PHP 8 attributes** — advices are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]` right on your aspect methods, with a powerful regexp-like pointcut syntax (`execution(public App\Services\**->*(*))`).
+- 🧩 **Laravel-native integration** — package auto-discovery, publishable config, aspects resolved through the container (constructor DI works), registration via a simple config list or the `goaop.aspect` service tag, `php artisan about` support.
+- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup`; with `debug` off the woven code is served straight from cache and plays nicely with opcache.
+- 🔬 **Pure PHP, no magic runtime** — built on Go! AOP 4.x: no PECL extensions, no `eval()`, all transformations produce reviewable static PHP files.
+- ✅ **Proven by tests** — the bridge ships with end-to-end weaving tests (advice execution, `Around` return rewriting, cache generation) running against Laravel 12 and 13 on PHP 8.4.
 
-Installation
-------------
+## Requirements
 
-GoAopBridge can be easily installed with composer. Just ask a composer to download the bundle with dependencies by running the command:
+- PHP >= 8.4
+- Laravel 12 or 13
+- goaop/framework 4.x (attribute-based aspects)
+
+## Installation
 
 ```bash
-$ composer require goaop/goaop-laravel-bridge
+composer require goaop/goaop-laravel-bridge
 ```
 
-### Laravel 5.5+
+The service provider is registered automatically via package discovery.
 
-No action is needed. After the command `composer require goaop/goaop-laravel-bridge` the package is installed and configured automatically. For a manual configuration, [follow these steps](#configuration).
+> **Note**
+> Until goaop/framework 4.0 is tagged, the bridge depends on the unreleased
+> `4.0-dev` line, so your application's `composer.json` needs:
+>
+> ```json
+> "minimum-stability": "dev",
+> "prefer-stable": true
+> ```
 
-### Laravel 5.4 or less
+Publish the configuration if you want to tweak it:
 
-Add the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to your config/app.php `providers` array:
-
-```php
-// config/app.php
-
-    'providers' => [
-        // Go! Aspect Service Provider
-        Go\Laravel\GoAopBridge\GoAopServiceProvider::class,
-```
-
-Make sure that this service provider is the **first item** in this list. This is required for the AOP engine to work correctly.
-
-
-
-### Lumen
-
-Register the `Go\Laravel\GoAopBridge\GoAopServiceProvider` to the app in your bootstrap/app.php:
-
-```php
-// bootstrap/app.php
-<?php
-// After `$app` is created
-
-$app->register(\Go\Laravel\GoAopBridge\GoAopServiceProvider::class);
-```
-
-Make sure that this service provider is the **first** call to `$app->register()`. This is required for the AOP engine to work correctly.
-
-Configuration
--------------
-
-The default configuration in the `config/go_aop.php` file. If you want to change any of the default values you have to copy this file to your own config directory to modify the values. 
-
-If you use Laravel, you **can** also publish the config using this command:
 ```bash
-./artisan vendor:publish --provider="Go\Laravel\GoAopBridge\GoAopServiceProvider"
+php artisan vendor:publish --tag=goaop-config
 ```
 
-If you use Lumen, you **have** to manually load the config file, example:
-```php
-// bootstrap/app.php
-<?php
-// After `$app` is created
+## Defining an aspect
 
-$app->configure('go_aop');
-```
+Aspects are plain classes implementing `Go\Aop\Aspect` whose advice methods are declared with PHP 8 attributes (`#[Before]`, `#[After]`, `#[Around]`, `#[AfterThrowing]`):
 
-Configuration can be used for additional tuning of AOP kernel and source code whitelistsing/blacklisting.
-```php
-// config/go_aop.php
-
-return [
-    /*
-     |--------------------------------------------------------------------------
-     | AOP Debug Mode
-     |--------------------------------------------------------------------------
-     |
-     | When AOP is in debug mode, then breakpoints in the original source code
-     | will work. Also engine will refresh cache files if the original files were
-     | changed.
-     | For production mode, no extra filemtime checks and better integration with opcache
-     |
-     */
-    'debug' => env('APP_DEBUG', false),
-
-    /*
-     |--------------------------------------------------------------------------
-     | Application root directory
-     |--------------------------------------------------------------------------
-     |
-     | AOP will be applied only to the files in this directory, change it to app_path()
-     | if needed
-     */
-    'appDir' => base_path(),
-
-    /*
-     |--------------------------------------------------------------------------
-     | AOP cache directory
-     |--------------------------------------------------------------------------
-     |
-     | AOP engine will put all transformed files and caches in that directory
-     */
-    'cacheDir' => storage_path('app/aspect'),
-
-    /*
-     |--------------------------------------------------------------------------
-     | Cache file mode
-     |--------------------------------------------------------------------------
-     |
-     | If configured then will be used as cache file mode for chmod.
-     | WARNING! Use only integers here, not a string, e.g. 0770 instead of '0770'
-     */
-    'cacheFileMode' => null,
-
-    /*
-     |--------------------------------------------------------------------------
-     | Controls miscellaneous features of AOP engine
-     |--------------------------------------------------------------------------
-     |
-     | See \Go\Aop\Features enumeration for bit mask
-     */
-    'features' => 0,
-
-    /*
-     |--------------------------------------------------------------------------
-     | White list of directories
-     |--------------------------------------------------------------------------
-     |
-     | AOP will check this list to apply an AOP to selected directories only,
-     | leave it empty if you want AOP to be applied to all files in the appDir
-     */
-    'includePaths' => [
-        app('path')
-    ],
-
-    /*
-     |--------------------------------------------------------------------------
-     | Black list of directories
-     |--------------------------------------------------------------------------
-     |
-     | AOP will check this list to disable AOP for selected directories
-     */
-    'excludePaths' => [],
-
-    /*
-     |--------------------------------------------------------------------------
-     | AOP container class
-     |--------------------------------------------------------------------------
-     |
-     | This option can be useful for extension and fine-tuning of services
-     */
-    'containerClass' => GoAspectContainer::class,
-]
-```
-
-Defining new aspects
---------------------
-
-Aspects are services in the Laravel application and loaded into the AOP container with the help of service provider that collects all services tagged with `goaop.aspect` tag in the container. Here is an example how to implement a logging aspect that will log information about public method invocations in the app/ directory.
-
-
-Definition of aspect class with pointuct and logging advice
 ```php
 <?php
 
-namespace App\Aspect;
+namespace App\Aspects;
 
 use Go\Aop\Aspect;
 use Go\Aop\Intercept\MethodInvocation;
-use Go\Lang\Annotation\Before;
-use Psr\Log\LoggerInterface;
+use Go\Lang\Attribute\Around;
+use Go\Lang\Attribute\Before;
+use Illuminate\Support\Facades\Log;
 
-/**
- * Application logging aspect
- */
 class LoggingAspect implements Aspect
 {
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    public function __construct(LoggerInterface $logger)
+    #[Before('execution(public App\Services\**->*(*))')]
+    public function logMethodCall(MethodInvocation $invocation): void
     {
-        $this->logger = $logger;
+        Log::debug('Calling ' . $invocation->getMethod()->getName());
     }
 
-    /**
-     * Writes a log info before method execution
-     *
-     * @param MethodInvocation $invocation
-     * @Before("execution(public **->*(*))")
-     */
-    public function beforeMethod(MethodInvocation $invocation)
+    #[Around('execution(public App\Services\PaymentService->charge(*))')]
+    public function measureCharge(MethodInvocation $invocation): mixed
     {
-        $this->logger->info($invocation, $invocation->getArguments());
+        $start = hrtime(true);
+        try {
+            return $invocation->proceed();
+        } finally {
+            Log::info('charge() took ' . (hrtime(true) - $start) / 1e6 . 'ms');
+        }
     }
 }
 ```
 
-To register all application aspects in the container, create a service provider (or use an existing one)
+See the Go! AOP documentation on [core concepts](https://github.com/goaop/framework#core-concepts) and [creating aspects](https://github.com/goaop/framework#4-create-an-aspect) for the full pointcut expression syntax.
+
+## Auto-discovery of aspects
+
+You never register aspects with the AOP engine manually. During the application's boot phase — after all service providers have registered, before your application code runs — the bridge collects aspects from two sources and hands each of them to the engine's aspect container:
+
+1. **The `go_aop.aspects` config list.** Every class listed here is resolved through the Laravel service container, so constructor dependency injection works out of the box:
+
+   ```php
+   // config/go_aop.php
+   'aspects' => [
+       App\Aspects\LoggingAspect::class,
+   ],
+   ```
+
+2. **The `goaop.aspect` container tag.** Any service tagged with `goaop.aspect` in one of your service providers is picked up automatically — useful when an aspect needs non-trivial construction logic, or when a package wants to contribute aspects without touching your config:
+
+   ```php
+   // app/Providers/AppServiceProvider.php — in register()
+   $this->app->singleton(LoggingAspect::class, function ($app) {
+       return new LoggingAspect($app->make(LoggerInterface::class));
+   });
+   $this->app->tag([LoggingAspect::class], 'goaop.aspect');
+   ```
+
+Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails fast with a descriptive exception. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
+
+## Configuration
+
+Key options in `config/go_aop.php` (all overridable via env):
+
+| Option | Default | Purpose |
+|---|---|---|
+| `debug` | `GOAOP_DEBUG` → `APP_DEBUG` | Re-weave when sources change; keep off in production |
+| `appDir` | `base_path()` | Root directory the weaver may touch |
+| `cacheDir` | `storage_path('framework/aop')` (`GOAOP_CACHE_DIR`) | Where woven sources and proxies are cached |
+| `cacheFileMode` | `0770` (`GOAOP_CACHE_PERMISSIONS`, octal digits, e.g. `"770"`) | chmod for cache files |
+| `includePaths` | `[app_path()]` | Only these directories are woven |
+| `excludePaths` | `[]` | Never weave these |
+| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features |
+| `aspects` | `[]` | Aspect classes to auto-register |
+
+## Deployment
+
+Weaving happens lazily on first load of each class. To pre-generate all proxies during deployment (recommended with `debug => false`):
+
 ```bash
-./artisan make:provider AopServiceProvider
+php artisan aop:warmup
 ```
 
-Inside `register()` method for this service provider, add declaration of aspect and tag it with `goaop.aspect` tag:
+`php artisan about` shows the current AOP cache location and debug mode.
 
-```php
+## Caveats
 
-namespace App\Providers;
+- Weaving starts at the beginning of the application's boot phase. Classes that are already loaded before that (very early bootstrap code, other packages' `register()` internals) cannot be woven.
+- Only classes under `appDir` + `includePaths` are considered — vendor code is not woven.
+- Exception handlers are best excluded via `excludePaths`: when a fatal error occurs, a woven handler may not be loadable from a cold cache.
 
-use App\Aspect\LoggingAspect;
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Support\ServiceProvider;
-use Psr\Log\LoggerInterface;
+## License
 
-class AopServiceProvider extends ServiceProvider
-{
-
-    /**
-     * Register the application services.
-     *
-     * @return void
-     */
-    public function register()
-    {
-        $this->app->singleton(LoggingAspect::class, function (Application $app) {
-            return new LoggingAspect($app->make(LoggerInterface::class));
-        });
-
-        $this->app->tag([LoggingAspect::class], 'goaop.aspect');
-    }
-```
-
-Don't forget to add this service provider into your `config/app.php` service providers list!
-
-License
--------
-
-This bridge is under the MIT license. See the complete LICENSE in the root directory
+MIT — see [LICENSE](LICENSE).

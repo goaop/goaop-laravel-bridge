@@ -24,7 +24,7 @@ return [
      |
      */
 
-    'debug' => env('GOAOP_DEBUG', env('APP_DEBUG', false)),
+    'debug' => (bool) env('GOAOP_DEBUG', env('APP_DEBUG', false)),
 
     /*
     |--------------------------------------------------------------------------
@@ -44,21 +44,23 @@ return [
     |--------------------------------------------------------------------------
     |
     | AOP engine will put all transformed files and caches in that directory.
+    | Use "php artisan aop:warmup" to pre-generate proxies during deployment.
     |
     */
 
-    'cacheDir' => env('GOAOP_CACHE_DIR', storage_path('app/aspect')),
+    'cacheDir' => env('GOAOP_CACHE_DIR', storage_path('framework/aop')),
 
     /*
     |--------------------------------------------------------------------------
     | Cache File Mode
     |--------------------------------------------------------------------------
     |
-    | If configured then will be used as cache file mode for chmod.
+    | File mode (chmod) for generated cache files, expressed in octal digits.
+    | The value is parsed with octdec(), so "770" means 0770 (rwxrwx---).
     |
     */
 
-    'cacheFileMode' => (int) env('GOAOP_CACHE_PERMISSIONS', 511),
+    'cacheFileMode' => octdec((string) env('GOAOP_CACHE_PERMISSIONS', '770')),
 
     /*
     |--------------------------------------------------------------------------
@@ -66,15 +68,14 @@ return [
     |--------------------------------------------------------------------------
     |
     | This option should contain a bitmask of values defined in
-    | \Go\Aop\Features enumeration:
+    | \Go\Aop\Features:
     |
-    | Support Options:
-    |   1  - enables interception of system function.
+    |   1  - enables interception of system functions.
     |   2  - enables interception of "new" operator in the source code.
     |   4  - enables interception of "include"/"require" operations
     |       in legacy code.
     |   64 - do not check the cache presence and assume that cache
-    |       is already prepared
+    |       is already prepared.
     |
     | <code>
     |   //
@@ -107,15 +108,29 @@ return [
     | Directories Black List
     |--------------------------------------------------------------------------
     |
-    | AOP will check this list to disable AOP for selected directories.
-    |
-    | Note: The App\Exceptions\Handler SHOULD NOT be handled by the
-    | GO! AOP framework, since in case of fatal errors, it will not be
-    | possible to correctly process an Exception.
+    | AOP will check this list to disable AOP for selected directories,
+    | e.g. paths holding classes that must never be proxied (exception
+    | handlers, the aspects themselves, generated code, ...).
     |
     */
 
-    'excludePaths' => [
-        app()->path() . '/Exceptions'
-    ],
+    'excludePaths' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Aspects
+    |--------------------------------------------------------------------------
+    |
+    | List of aspect classes (implementing \Go\Aop\Aspect, with advice
+    | methods declared via PHP attributes such as #[Before], #[After],
+    | #[Around] and #[AfterThrowing]) that should be registered
+    | automatically. Aspects are resolved through the Laravel container,
+    | so they can use constructor dependency injection.
+    |
+    | Alternatively (or additionally), tag any service with "goaop.aspect"
+    | in one of your service providers.
+    |
+    */
+
+    'aspects' => [],
 ];
