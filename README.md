@@ -89,7 +89,7 @@ class LoggingAspect implements Aspect
 }
 ```
 
-See the [pointcut reference](https://github.com/goaop/framework#pointcuts) for the full expression syntax.
+See the Go! AOP documentation on [core concepts](https://github.com/goaop/framework#core-concepts) and [creating aspects](https://github.com/goaop/framework#4-create-an-aspect) for the full pointcut expression syntax.
 
 ## Auto-discovery of aspects
 
