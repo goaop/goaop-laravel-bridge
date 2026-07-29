@@ -13,13 +13,13 @@ An integration bridge that plugs the [Go! AOP framework](https://github.com/goao
 
 The bridge is intentionally small. Everything lives under `src/` (PSR-4 namespace `Go\Laravel\GoAopBridge\`):
 
-- `src/GoAopServiceProvider.php` — the single entry point. `register()` merges package config and initializes the `AspectLaravelKernel` singleton **eagerly** — the kernel wraps the composer autoloader (`Go\Instrument\ClassLoading\AopComposerLoader`), so it must run before application classes are autoloaded. `boot()` registers aspects (from the `go_aop.aspects` config list and from services tagged `goaop.aspect`) and publishes the config.
+- `src/GoAopServiceProvider.php` — the single entry point. `register()` merges package config and schedules kernel initialization via `$this->app->booting(...)`, which fires at the very start of the boot phase (after all providers have registered, before any of them boots) — the kernel wraps the composer autoloader (`Go\Instrument\ClassLoading\AopComposerLoader`), so it must run before application classes are autoloaded. `boot()` registers aspects (from the `go_aop.aspects` config list and from services tagged `goaop.aspect`), publishes the config and wires the `aop:warmup` command.
 - `src/Kernel/AspectLaravelKernel.php` — thin `Go\Core\AspectKernel` subclass. Aspect registration happens through the service provider, not `configureAop()`.
 - `config/go_aop.php` — publishable config: `debug`, `appDir`, `cacheDir`, `cacheFileMode`, `includePaths`, `excludePaths`, `features`, `aspects`.
 
 Load-bearing constraints (do not "simplify" these away):
 
-- The kernel must be initialized in `register()`, not `boot()`, and as early as possible. Weaving only applies to classes loaded *after* init.
+- The kernel must be initialized at the start of the boot phase (via the `booting` callback), never lazily on first use. Weaving only applies to classes loaded *after* init. It cannot happen inside `register()` itself either: testbench (and environment-specific config in general) applies configuration after provider registration, so register-time init would freeze the default config.
 - `Go\Core\AspectKernel` is a process-global singleton with a `final protected` constructor. Tests touching the kernel must run in separate PHPUnit processes.
 - `cacheFileMode` must reach the kernel as an `int`; `env()` values from `.env` arrive as strings.
 - Aspects are plain classes implementing `Go\Aop\Aspect` with advice declared via PHP 8 attributes (`Go\Lang\Attribute\Before`, `After`, `Around`, `AfterThrowing`, `Pointcut`). Doctrine-style annotations are not supported anywhere.
