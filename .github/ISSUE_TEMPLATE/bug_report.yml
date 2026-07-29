@@ -1,0 +1,48 @@
+name: Bug report
+description: Report unexpected behavior in the Go! AOP Laravel bridge
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Minimal steps or repository reproducing the issue (aspect class, pointcut expression, config).
+      placeholder: |
+        1. Install the bridge with ...
+        2. Define aspect ...
+        3. Call ...
+    validations:
+      required: true
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.4.x"
+    validations:
+      required: true
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel version
+      placeholder: "12.x / 13.x"
+    validations:
+      required: true
+  - type: input
+    id: goaop-version
+    attributes:
+      label: goaop/framework version
+      placeholder: "4.0-dev"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output / stack trace
+      render: shell
