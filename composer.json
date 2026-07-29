@@ -12,7 +12,7 @@
     ],
     "require": {
         "php": "^8.4",
-        "goaop/framework": "^3.1",
+        "goaop/framework": "^4.0@dev",
         "illuminate/support": "^12.0|^13.0"
     },
     "require-dev": {
@@ -36,6 +36,8 @@
     "config": {
         "sort-packages": true
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "extra": {
         "laravel": {
             "providers": [

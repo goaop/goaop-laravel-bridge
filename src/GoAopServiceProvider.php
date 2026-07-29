@@ -8,74 +8,121 @@
  * with this source code in the file LICENSE.
  */
 
+declare(strict_types=1);
+
 namespace Go\Laravel\GoAopBridge;
 
+use Go\Aop\Aspect;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
+use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 /**
  * Service provider for registration of Go! AOP framework
  */
 class GoAopServiceProvider extends ServiceProvider
 {
-    /**
-     * Bootstrap the application services.
-     *
-     * @return void
-     */
-    public function boot()
+    public function register(): void
     {
-        /** @var AspectContainer $aspectContainer */
-        $aspectContainer = $this->app->make(AspectContainer::class);
+        $this->mergeConfigFrom($this->configPath(), 'go_aop');
 
-        // Let's collect all aspects and just register them in the container
-        $aspects = $this->app->tagged('goaop.aspect');
-        foreach ($aspects as $aspect) {
-            $aspectContainer->registerAspect($aspect);
+        $this->app->singleton(AspectKernel::class, function (): AspectKernel {
+            $kernel = AspectLaravelKernel::getInstance();
+            // @phpstan-ignore argument.type (options come from config and are validated by the kernel)
+            $kernel->init($this->kernelOptions());
+
+            return $kernel;
+        });
+        $this->app->singleton(
+            AspectContainer::class,
+            static fn ($app): AspectContainer => $app->make(AspectKernel::class)->getContainer()
+        );
+
+        // The kernel wraps the composer autoloader, and weaving only applies
+        // to classes loaded after that point — so it must start at the very
+        // beginning of the boot phase, before any provider boots.
+        $this->app->booting(function (): void {
+            $this->app->make(AspectKernel::class);
+        });
+    }
+
+    public function boot(): void
+    {
+        $this->publishes([$this->configPath() => config_path('go_aop.php')], 'goaop-config');
+
+        $this->registerAspects();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([WarmupCommand::class]);
+
+            if (class_exists(AboutCommand::class)) {
+                AboutCommand::add('Go! AOP', fn (): array => [
+                    'Cache Directory' => (string) $this->app->make('config')->get('go_aop.cacheDir'),
+                    'Debug Mode' => $this->app->make('config')->get('go_aop.debug') ? 'ENABLED' : 'OFF',
+                ]);
+            }
         }
     }
 
     /**
-     * Register the application services.
-     *
-     * @return void
+     * Registers aspects declared in the "go_aop.aspects" config list and
+     * services tagged with "goaop.aspect" in the aspect container.
      */
-    public function register()
+    private function registerAspects(): void
     {
-        $this->publishes([$this->configPath() => config_path('go_aop.php')]);
-        $this->mergeConfigFrom($this->configPath(), 'go_aop');
+        /** @var AspectContainer $aspectContainer */
+        $aspectContainer = $this->app->make(AspectContainer::class);
+        $registered = [];
 
-        $this->app->singleton(AspectKernel::class, function () {
-            $aspectKernel = AspectLaravelKernel::getInstance();
-            $aspectKernel->init(config('go_aop'));
+        $register = function (object $aspect) use ($aspectContainer, &$registered): void {
+            if (!$aspect instanceof Aspect) {
+                throw new InvalidArgumentException(sprintf(
+                    'Aspect "%s" must implement the "%s" interface.',
+                    $aspect::class,
+                    Aspect::class
+                ));
+            }
+            if (!isset($registered[$aspect::class])) {
+                $aspectContainer->registerAspect($aspect);
+                $registered[$aspect::class] = true;
+            }
+        };
 
-            return $aspectKernel;
-        });
+        /** @var array<int, class-string> $configuredAspects */
+        $configuredAspects = $this->app->make('config')->get('go_aop.aspects', []);
+        foreach ($configuredAspects as $aspectClass) {
+            $register($this->app->make($aspectClass));
+        }
 
-        $this->app->singleton(AspectContainer::class, function ($app) {
-            /** @var AspectKernel $kernel */
-            $kernel = $app->make(AspectKernel::class);
-
-            return $kernel->getContainer();
-        });
+        foreach ($this->app->tagged('goaop.aspect') as $aspect) {
+            $register($aspect);
+        }
     }
 
     /**
-     * @inheritDoc
+     * Collects normalized kernel options from the merged configuration.
+     *
+     * @return array<string, mixed>
      */
-    public function provides()
+    private function kernelOptions(): array
     {
-        return [AspectKernel::class, AspectContainer::class];
+        /** @var array<string, mixed> $config */
+        $config = $this->app->make('config')->get('go_aop');
+
+        // The "aspects" list is a bridge-level concept unknown to the kernel.
+        unset($config['aspects']);
+
+        return $config;
     }
 
     /**
      * Returns the path to the configuration
-     *
-     * @return string
      */
-    private function configPath()
+    private function configPath(): string
     {
         return __DIR__ . '/../config/go_aop.php';
     }
