@@ -21,7 +21,7 @@ class AspectLaravelKernel extends AspectKernel
     /**
      * {@inheritdoc}
      */
-    protected function configureAop(AspectContainer $container)
+    protected function configureAop(AspectContainer $container): void
     {
     }
 }

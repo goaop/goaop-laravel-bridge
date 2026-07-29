@@ -3,10 +3,6 @@
     "description": "Integration bridge for Go! AOP framework",
     "type": "library",
     "keywords": ["bridge", "laravel", "aop", "php", "aspect"],
-    "require": {
-        "goaop/framework": "^1.0|^2.0|^3.0",
-        "illuminate/support": "^5.0|^6.0|^7.0|^8.0"
-    },
     "license": "MIT",
     "authors": [
         {
@@ -14,10 +10,31 @@
             "email": "lisachenko.it@gmail.com"
         }
     ],
+    "require": {
+        "php": "^8.4",
+        "goaop/framework": "^3.1",
+        "illuminate/support": "^12.0|^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0|^11.0",
+        "phpunit/phpunit": "^11.5"
+    },
     "autoload": {
         "psr-4": {
-            "Go\\Laravel\\GoAopBridge\\": "./src"
+            "Go\\Laravel\\GoAopBridge\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Go\\Laravel\\GoAopBridge\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true
     },
     "extra": {
         "laravel": {
