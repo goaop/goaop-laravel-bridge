@@ -91,22 +91,30 @@ class LoggingAspect implements Aspect
 
 See the [pointcut reference](https://github.com/goaop/framework#pointcuts) for the full expression syntax.
 
-## Registering aspects
+## Auto-discovery of aspects
 
-Either list aspect classes in `config/go_aop.php` — they are resolved through the container, so constructor injection works:
+You never register aspects with the AOP engine manually. During the application's boot phase — after all service providers have registered, before your application code runs — the bridge collects aspects from two sources and hands each of them to the engine's aspect container:
 
-```php
-'aspects' => [
-    App\Aspects\LoggingAspect::class,
-],
-```
+1. **The `go_aop.aspects` config list.** Every class listed here is resolved through the Laravel service container, so constructor dependency injection works out of the box:
 
-…or tag them in a service provider:
+   ```php
+   // config/go_aop.php
+   'aspects' => [
+       App\Aspects\LoggingAspect::class,
+   ],
+   ```
 
-```php
-$this->app->singleton(LoggingAspect::class);
-$this->app->tag([LoggingAspect::class], 'goaop.aspect');
-```
+2. **The `goaop.aspect` container tag.** Any service tagged with `goaop.aspect` in one of your service providers is picked up automatically — useful when an aspect needs non-trivial construction logic, or when a package wants to contribute aspects without touching your config:
+
+   ```php
+   // app/Providers/AppServiceProvider.php — in register()
+   $this->app->singleton(LoggingAspect::class, function ($app) {
+       return new LoggingAspect($app->make(LoggerInterface::class));
+   });
+   $this->app->tag([LoggingAspect::class], 'goaop.aspect');
+   ```
+
+Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails fast with a descriptive exception. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
 
 ## Configuration
 
