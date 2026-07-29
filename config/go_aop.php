@@ -58,7 +58,7 @@ return [
     |
     */
 
-    'cacheFileMode' => env('GOAOP_CACHE_PERMISSIONS', 511),
+    'cacheFileMode' => (int) env('GOAOP_CACHE_PERMISSIONS', 511),
 
     /*
     |--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ return [
     |
     */
 
-    'features' => env('GOAOP_FEATURES', 0),
+    'features' => (int) env('GOAOP_FEATURES', 0),
 
     /*
     |--------------------------------------------------------------------------
@@ -118,15 +118,4 @@ return [
     'excludePaths' => [
         app()->path() . '/Exceptions'
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | AOP Container
-    |--------------------------------------------------------------------------
-    |
-    | This option can be useful for extension and fine-tuning of services.
-    |
-    */
-
-    'containerClass' => \Go\Core\GoAspectContainer::class,
 ];
