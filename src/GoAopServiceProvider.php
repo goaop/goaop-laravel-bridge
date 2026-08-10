@@ -17,6 +17,7 @@ use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -60,10 +61,14 @@ class GoAopServiceProvider extends ServiceProvider
             $this->commands([WarmupCommand::class]);
 
             if (class_exists(AboutCommand::class)) {
-                AboutCommand::add('Go! AOP', fn (): array => [
-                    'Cache Directory' => (string) $this->app->make('config')->get('go_aop.cacheDir'),
-                    'Debug Mode' => $this->app->make('config')->get('go_aop.debug') ? 'ENABLED' : 'OFF',
-                ]);
+                AboutCommand::add('Go! AOP', function (): array {
+                    $options = $this->kernelOptions();
+
+                    return [
+                        'Cache Directory' => $options['cacheDir'] ?? 'NOT CONFIGURED',
+                        'Debug Mode' => $options['debug'] ? 'ENABLED' : 'OFF',
+                    ];
+                });
             }
         }
     }
@@ -78,11 +83,11 @@ class GoAopServiceProvider extends ServiceProvider
         $aspectContainer = $this->app->make(AspectContainer::class);
         $registered = [];
 
-        $register = function (object $aspect) use ($aspectContainer, &$registered): void {
+        $register = function (mixed $aspect) use ($aspectContainer, &$registered): void {
             if (!$aspect instanceof Aspect) {
                 throw new InvalidArgumentException(sprintf(
                     'Aspect "%s" must implement the "%s" interface.',
-                    $aspect::class,
+                    get_debug_type($aspect),
                     Aspect::class
                 ));
             }
@@ -92,9 +97,7 @@ class GoAopServiceProvider extends ServiceProvider
             }
         };
 
-        /** @var array<int, class-string> $configuredAspects */
-        $configuredAspects = $this->app->make('config')->get('go_aop.aspects', []);
-        foreach ($configuredAspects as $aspectClass) {
+        foreach ($this->configuredAspectClasses() as $aspectClass) {
             $register($this->app->make($aspectClass));
         }
 
@@ -104,19 +107,98 @@ class GoAopServiceProvider extends ServiceProvider
     }
 
     /**
+     * Returns the list of aspect classes declared in the "go_aop.aspects" config.
+     *
+     * @return list<string>
+     */
+    private function configuredAspectClasses(): array
+    {
+        $configuredAspects = $this->config()->get('go_aop.aspects', []);
+        if (!is_array($configuredAspects)) {
+            throw new InvalidArgumentException(sprintf(
+                'The "go_aop.aspects" configuration must be a list of aspect class names, "%s" given.',
+                get_debug_type($configuredAspects)
+            ));
+        }
+
+        $aspectClasses = [];
+        foreach ($configuredAspects as $aspectClass) {
+            if (!is_string($aspectClass)) {
+                throw new InvalidArgumentException(sprintf(
+                    'The "go_aop.aspects" configuration must contain class names, "%s" given.',
+                    get_debug_type($aspectClass)
+                ));
+            }
+            $aspectClasses[] = $aspectClass;
+        }
+
+        return $aspectClasses;
+    }
+
+    /**
      * Collects normalized kernel options from the merged configuration.
      *
-     * @return array<string, mixed>
+     * The "aspects" list is a bridge-level concept unknown to the kernel and
+     * is therefore not part of the returned options. Values that do not match
+     * the type expected by the kernel fall back to the kernel defaults, so a
+     * malformed configuration behaves exactly as a missing one.
+     *
+     * @return array{
+     *     debug: bool,
+     *     appDir: string,
+     *     cacheDir: string|null,
+     *     cacheFileMode?: int,
+     *     features: int,
+     *     includePaths: list<string>,
+     *     excludePaths: list<string>,
+     * }
      */
     private function kernelOptions(): array
     {
-        /** @var array<string, mixed> $config */
-        $config = $this->app->make('config')->get('go_aop');
+        $config = $this->config();
 
-        // The "aspects" list is a bridge-level concept unknown to the kernel.
-        unset($config['aspects']);
+        $debug    = $config->get('go_aop.debug');
+        $appDir   = $config->get('go_aop.appDir');
+        $cacheDir = $config->get('go_aop.cacheDir');
+        $features = $config->get('go_aop.features');
 
-        return $config;
+        $options = [
+            'debug'        => is_bool($debug) ? $debug : false,
+            'appDir'       => is_string($appDir) ? $appDir : '',
+            'cacheDir'     => is_string($cacheDir) ? $cacheDir : null,
+            'features'     => is_int($features) ? $features : 0,
+            'includePaths' => $this->pathListOption('go_aop.includePaths'),
+            'excludePaths' => $this->pathListOption('go_aop.excludePaths'),
+        ];
+
+        // Leave the key out for non-int values, so the kernel can apply its
+        // own umask-based default instead of an arbitrary file mode.
+        $cacheFileMode = $config->get('go_aop.cacheFileMode');
+        if (is_int($cacheFileMode)) {
+            $options['cacheFileMode'] = $cacheFileMode;
+        }
+
+        return $options;
+    }
+
+    /**
+     * Reads a list of directories from the given configuration key.
+     *
+     * @return list<string>
+     */
+    private function pathListOption(string $key): array
+    {
+        $paths = $this->config()->get($key, []);
+
+        return is_array($paths) ? array_values(array_filter($paths, is_string(...))) : [];
+    }
+
+    /**
+     * Returns the application configuration repository
+     */
+    private function config(): ConfigRepository
+    {
+        return $this->app->make(ConfigRepository::class);
     }
 
     /**
