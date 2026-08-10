@@ -18,6 +18,7 @@ use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -33,14 +34,19 @@ class GoAopServiceProvider extends ServiceProvider
 
         $this->app->singleton(AspectKernel::class, function (): AspectKernel {
             $kernel = AspectLaravelKernel::getInstance();
-            // @phpstan-ignore argument.type (options come from config and are validated by the kernel)
+            // The upstream init() signature is annotated with a narrower shape
+            // than the kernel actually accepts (a literal-string "appDir" and
+            // empty include/exclude path arrays), while the options here are
+            // runtime values of the very types AspectKernel::normalizeOptions()
+            // documents and expects.
+            // @phpstan-ignore argument.type
             $kernel->init($this->kernelOptions());
 
             return $kernel;
         });
         $this->app->singleton(
             AspectContainer::class,
-            static fn ($app): AspectContainer => $app->make(AspectKernel::class)->getContainer()
+            static fn (Container $app): AspectContainer => $app->make(AspectKernel::class)->getContainer()
         );
 
         // The kernel wraps the composer autoloader, and weaving only applies
@@ -79,7 +85,6 @@ class GoAopServiceProvider extends ServiceProvider
      */
     private function registerAspects(): void
     {
-        /** @var AspectContainer $aspectContainer */
         $aspectContainer = $this->app->make(AspectContainer::class);
         $registered = [];
 

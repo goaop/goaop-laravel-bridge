@@ -1,7 +1,7 @@
 # Go! AOP Laravel bridge
 
 [![CI](https://github.com/goaop/goaop-laravel-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/goaop/goaop-laravel-bridge/actions/workflows/ci.yml)
-![PHPStan Badge](https://img.shields.io/badge/PHPStan-level%206-brightgreen.svg?style=flat&link=https%3A%2F%2Fphpstan.org%2Fuser-guide%2Frule-levels)
+![PHPStan Badge](https://img.shields.io/badge/PHPStan-level%20max-brightgreen.svg?style=flat&link=https%3A%2F%2Fphpstan.org%2Fuser-guide%2Frule-levels)
 [![GitHub release](https://img.shields.io/github/release/goaop/goaop-laravel-bridge.svg)](https://github.com/goaop/goaop-laravel-bridge/releases/latest)
 [![Total Downloads](https://img.shields.io/packagist/dt/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
 [![Monthly Downloads](https://img.shields.io/packagist/dm/goaop/goaop-laravel-bridge.svg)](https://packagist.org/packages/goaop/goaop-laravel-bridge)
