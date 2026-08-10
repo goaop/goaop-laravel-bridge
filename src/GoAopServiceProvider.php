@@ -34,12 +34,6 @@ class GoAopServiceProvider extends ServiceProvider
 
         $this->app->singleton(AspectKernel::class, function (): AspectKernel {
             $kernel = AspectLaravelKernel::getInstance();
-            // The upstream init() signature is annotated with a narrower shape
-            // than the kernel actually accepts (a literal-string "appDir" and
-            // empty include/exclude path arrays), while the options here are
-            // runtime values of the very types AspectKernel::normalizeOptions()
-            // documents and expects.
-            // @phpstan-ignore argument.type
             $kernel->init($this->kernelOptions());
 
             return $kernel;
