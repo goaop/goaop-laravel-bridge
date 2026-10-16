@@ -91,7 +91,8 @@ class GoAopServiceProvider extends ServiceProvider
                 ));
             }
             if (!isset($registered[$aspect::class])) {
-                $aspectContainer->registerAspect($aspect);
+                // Aspects are ordinary container services since Go! AOP 4.0
+                $aspectContainer->add($aspect::class, $aspect);
                 $registered[$aspect::class] = true;
             }
         };
