@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace Go\Laravel\GoAopBridge\Tests;
 
 use Go\Aop\Aspect;
+use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\GoAopServiceProvider;
 use Go\Laravel\GoAopBridge\Tests\Fixtures\EmptyAspect;
 use InvalidArgumentException;
@@ -57,11 +58,13 @@ class AspectConfigValidationTest extends TestCase
     }
 
     /**
-     * Boots a fresh provider instance against the current configuration,
-     * as the package provider itself is booted before the test body runs.
+     * Re-registers the provider and resolves the kernel against the current
+     * configuration, as the package provider itself has already configured
+     * the kernel before the test body runs.
      */
     private function bootProvider(): void
     {
-        (new GoAopServiceProvider($this->app))->boot();
+        (new GoAopServiceProvider($this->app))->register();
+        $this->app->make(AspectKernel::class);
     }
 }

@@ -70,18 +70,21 @@ return [
     | This option should contain a bitmask of values defined in
     | \Go\Aop\Features:
     |
-    |   1  - enables interception of system functions.
-    |   2  - enables interception of "new" operator in the source code.
     |   4  - enables interception of "include"/"require" operations
-    |       in legacy code.
+    |       in legacy code (Features::INTERCEPT_INCLUDES).
     |   64 - do not check the cache presence and assume that cache
-    |       is already prepared.
+    |       is already prepared (Features::PREBUILT_CACHE), e.g. after
+    |       "php artisan aop:warmup" during deployment.
+    |
+    | Interception of system functions and of the "new" operator no longer
+    | needs a feature flag: it is enabled by the registered pointcuts.
+    | Unknown bits (such as the former 1 and 2) are rejected by the engine.
     |
     | <code>
     |   //
-    |   // bitmask of 1 + 2 + 4 options.
+    |   // bitmask of 4 + 64 options.
     |   //
-    |   'features' => 1 | 2 | 4,
+    |   'features' => 4 | 64,
     |
     | </code>
     |

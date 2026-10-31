@@ -35,6 +35,7 @@ class GoAopServiceProvider extends ServiceProvider
         $this->app->singleton(AspectKernel::class, function (): AspectKernel {
             $kernel = AspectLaravelKernel::getInstance();
             $kernel->init($this->kernelOptions());
+            $this->registerConfiguredAspects($kernel->getContainer());
 
             return $kernel;
         });
@@ -55,7 +56,7 @@ class GoAopServiceProvider extends ServiceProvider
     {
         $this->publishes([$this->configPath() => config_path('go_aop.php')], 'goaop-config');
 
-        $this->registerAspects();
+        $this->registerTaggedAspects();
 
         if ($this->app->runningInConsole()) {
             $this->commands([WarmupCommand::class]);
@@ -74,15 +75,50 @@ class GoAopServiceProvider extends ServiceProvider
     }
 
     /**
-     * Registers aspects declared in the "go_aop.aspects" config list and
-     * services tagged with "goaop.aspect" in the aspect container.
+     * Registers the aspects declared in the "go_aop.aspects" config list as
+     * deferred services of the aspect container, right after the kernel is
+     * initialized.
+     *
+     * Weaving only needs the aspect classes, so no aspect is created here:
+     * each one is resolved through the Laravel container on the first call
+     * of one of its advices, when the application is fully booted and every
+     * constructor dependency is available. The Laravel container is attached
+     * as the PSR-11 delegate of the aspect container for the same reason.
      */
-    private function registerAspects(): void
+    private function registerConfiguredAspects(AspectContainer $aspectContainer): void
+    {
+        $aspectContainer->setDelegate($this->app);
+
+        foreach ($this->configuredAspectClasses() as $aspectClass) {
+            if (!is_subclass_of($aspectClass, Aspect::class)) {
+                throw new InvalidArgumentException(sprintf(
+                    'Aspect "%s" must implement the "%s" interface.',
+                    $aspectClass,
+                    Aspect::class
+                ));
+            }
+            $aspectContainer->addLazyService(
+                $aspectClass,
+                fn (): Aspect => $this->app->make($aspectClass)
+            );
+        }
+    }
+
+    /**
+     * Registers the services tagged with "goaop.aspect" in the aspect container.
+     *
+     * A Laravel tag can only be enumerated by resolving its services, so these
+     * aspects are created when the provider boots, unlike the config-declared
+     * ones. They are registered under their class name, as the engine requires.
+     */
+    private function registerTaggedAspects(): void
     {
         $aspectContainer = $this->app->make(AspectContainer::class);
-        $registered = [];
+        // The aspect container delegates has() to the Laravel container, so the
+        // registrations are tracked here instead of being looked up
+        $registered = array_fill_keys($this->configuredAspectClasses(), true);
 
-        $register = function (mixed $aspect) use ($aspectContainer, &$registered): void {
+        foreach ($this->app->tagged('goaop.aspect') as $aspect) {
             if (!$aspect instanceof Aspect) {
                 throw new InvalidArgumentException(sprintf(
                     'Aspect "%s" must implement the "%s" interface.',
@@ -91,18 +127,9 @@ class GoAopServiceProvider extends ServiceProvider
                 ));
             }
             if (!isset($registered[$aspect::class])) {
-                // Aspects are ordinary container services since Go! AOP 4.0
                 $aspectContainer->add($aspect::class, $aspect);
                 $registered[$aspect::class] = true;
             }
-        };
-
-        foreach ($this->configuredAspectClasses() as $aspectClass) {
-            $register($this->app->make($aspectClass));
-        }
-
-        foreach ($this->app->tagged('goaop.aspect') as $aspect) {
-            $register($aspect);
         }
     }
 
