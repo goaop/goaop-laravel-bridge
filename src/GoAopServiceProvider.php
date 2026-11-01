@@ -16,6 +16,7 @@ use Go\Aop\Aspect;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
+use Go\Laravel\GoAopBridge\Console\WarmupWorkerCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Container\Container;
@@ -59,7 +60,7 @@ class GoAopServiceProvider extends ServiceProvider
         $this->registerTaggedAspects();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([WarmupCommand::class]);
+            $this->commands([WarmupCommand::class, WarmupWorkerCommand::class]);
 
             if (class_exists(AboutCommand::class)) {
                 AboutCommand::add('Go! AOP', function (): array {

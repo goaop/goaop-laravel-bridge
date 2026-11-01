@@ -143,6 +143,22 @@ php artisan aop:warmup
 
 The command exits with a non-zero status when a file cannot be woven, so a deploy script stops instead of shipping an incomplete cache. Weaving errors are written to the error output; pass `--fail-fast` to stop at the first one.
 
+Large applications are woven faster in parallel worker processes:
+
+```bash
+php artisan aop:warmup --workers=8
+```
+
+Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last 100 parsed files in memory; raise `--cached-files` to re-parse less, lower it to use less memory.
+
+To prepare the cache of a new release next to the running one, build it in another directory:
+
+```bash
+php artisan aop:warmup --cache-dir=/srv/app/releases/next/storage/framework/aop
+```
+
+The kernel (and the workers) keep serving from their own directory while the other one is built from scratch, and a cache built this way is complete and location independent.
+
 `php artisan about` shows the current AOP cache location and debug mode.
 
 ## Caveats
