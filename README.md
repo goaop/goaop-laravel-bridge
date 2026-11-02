@@ -95,7 +95,7 @@ See the Go! AOP documentation on [core concepts](https://github.com/goaop/framew
 
 You never register aspects with the AOP engine manually. During the application's boot phase — after all service providers have registered, before your application code runs — the bridge collects aspects from two sources and hands each of them to the engine's aspect container:
 
-1. **The `go_aop.aspects` config list.** Every class listed here is resolved through the Laravel service container, so constructor dependency injection works out of the box:
+1. **The `go_aop.aspects` config list.** Every class listed here is registered with the engine as soon as the AOP kernel starts, before any service provider boots, and resolved through the Laravel service container on the first call of one of its advices. Constructor dependency injection works out of the box, and an aspect may depend on services that only become available once the application has fully booted:
 
    ```php
    // config/go_aop.php
@@ -114,7 +114,9 @@ You never register aspects with the AOP engine manually. During the application'
    $this->app->tag([LoggingAspect::class], 'goaop.aspect');
    ```
 
-Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails fast with a descriptive exception. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
+   Tagged services are resolved when the bridge's provider boots (a Laravel tag can only be enumerated by resolving its services), so prefer the config list for aspects with heavy or boot-dependent constructors.
+
+Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails fast with a descriptive exception. The Laravel container is attached to the engine's aspect container as its PSR-11 delegate, so advices and aspect factories can look up application services through it. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
 
 ## Configuration
 
@@ -128,7 +130,7 @@ Key options in `config/go_aop.php` (all overridable via env):
 | `cacheFileMode` | `0770` (`GOAOP_CACHE_PERMISSIONS`, octal digits, e.g. `"770"`) | chmod for cache files |
 | `includePaths` | `[app_path()]` | Only these directories are woven |
 | `excludePaths` | `[]` | Never weave these |
-| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features |
+| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64; function and `new` interception is driven by pointcuts and needs no flag) |
 | `aspects` | `[]` | Aspect classes to auto-register |
 
 ## Deployment
@@ -138,6 +140,24 @@ Weaving happens lazily on first load of each class. To pre-generate all proxies 
 ```bash
 php artisan aop:warmup
 ```
+
+The command exits with a non-zero status when a file cannot be woven, so a deploy script stops instead of shipping an incomplete cache. Weaving errors are written to the error output; pass `--fail-fast` to stop at the first one.
+
+Large applications are woven faster in parallel worker processes:
+
+```bash
+php artisan aop:warmup --workers=8
+```
+
+Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last 100 parsed files in memory; raise `--cached-files` to re-parse less, lower it to use less memory.
+
+To prepare the cache of a new release next to the running one, build it in another directory:
+
+```bash
+php artisan aop:warmup --cache-dir=/srv/app/releases/next/storage/framework/aop
+```
+
+The kernel (and the workers) keep serving from their own directory while the other one is built from scratch, and a cache built this way is complete and location independent.
 
 `php artisan about` shows the current AOP cache location and debug mode.
 
