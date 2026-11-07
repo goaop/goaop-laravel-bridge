@@ -131,7 +131,7 @@ Key options in `config/go_aop.php` (all overridable via env):
 | `parsedFilesLimit` | `100` (`GOAOP_PARSED_FILES_LIMIT`) | Parsed source files (~0.2 MB each) kept in memory while weaving: more re-parses less, fewer uses less memory; the default of `aop:warmup --cached-files` |
 | `includePaths` | `[app_path()]` | Only these directories are woven |
 | `excludePaths` | `[]` | Never weave these |
-| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64; function and `new` interception is driven by pointcuts and needs no flag) |
+| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64, `PARTIAL_REFLECTION` = 256; function and `new` interception is driven by pointcuts and needs no flag) |
 | `aspects` | `[]` | Aspect classes to auto-register |
 
 ## Deployment
