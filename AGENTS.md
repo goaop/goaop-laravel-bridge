@@ -6,7 +6,7 @@ This file is the canonical guidance for AI coding agents (and a quick orientatio
 
 An integration bridge that plugs the [Go! AOP framework](https://github.com/goaop/framework) into Laravel applications. It boots the AOP kernel early in the Laravel lifecycle so that the Go! AOP composer class loader can weave aspects into application classes transparently — no code generation steps, no manual proxy wiring for the application developer.
 
-- Target runtime: PHP >= 8.4, Laravel 12/13, goaop/framework 4.x (attribute-based aspects only).
+- Target runtime: PHP >= 8.4, Laravel 12/13, goaop/framework ^4.0 (attribute-based aspects only).
 - Package type: Laravel library package with auto-discovery (`extra.laravel.providers` in `composer.json`).
 
 ## Architecture map
@@ -33,10 +33,10 @@ Load-bearing constraints (do not "simplify" these away):
 ## Development commands
 
 ```bash
-composer install            # needs minimum-stability: dev deps (goaop/framework 4.x-dev)
+composer install
 composer validate --strict
 composer test               # phpunit
-composer analyse            # phpstan
+composer analyse            # phpstan 2, not a dev dependency: installed globally (CI: setup-php tools)
 ```
 
 Tests use orchestra/testbench; weaving tests run in separate processes and write proxy caches to a per-test temp directory.
@@ -53,4 +53,4 @@ Tests use orchestra/testbench; weaving tests run in separate processes and write
 - Do not register the service provider as deferrable; AOP initialization must be eager.
 - Do not autoload weaving-test fixture classes before the kernel is initialized (no `use`-triggering references at file top level in test bootstrap).
 - Do not add `containerClass` back to the config with `Go\Core\GoAspectContainer` — that class was removed upstream; the framework default (`Go\Core\Container`) is correct.
-- The upstream 4.x line is unreleased: composer requires `minimum-stability: dev` + `prefer-stable: true`. Do not "fix" that to stable until goaop/framework 4.0 is tagged.
+- The bridge requires the stable goaop/framework `^4.0`, and `symfony/console` `^7.4|^8.0` for the framework console classes it runs (`OpcacheWarmupCommand`, the warm-up output): do not bring back `minimum-stability: dev`. A framework feature that is not tagged yet is adopted once it is, with a raised `goaop/framework` constraint.

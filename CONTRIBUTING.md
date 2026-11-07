@@ -7,7 +7,7 @@ Thanks for helping improve the Go! AOP Laravel bridge!
 1. Fork/branch off `master`.
 2. Name your branch using **conventional branch names** (see below).
 3. Make your changes with **conventional commits**.
-4. Ensure the suite is green locally: `composer validate --strict && composer test && composer analyse`.
+4. Ensure the suite is green locally: `composer validate --strict && composer test && composer analyse`. `composer analyse` runs PHPStan 2, which is not a dev dependency: install it globally (CI uses the `phpstan` tool of setup-php).
 5. Open a pull request. The PR title must be a valid conventional commit subject — CI checks it.
 
 ## Conventional commits
@@ -68,3 +68,4 @@ docs/readme-attributes-example
 - Tests are built on [orchestra/testbench](https://github.com/orchestral/testbench).
 - Anything that initializes `AspectKernel` must run with `#[RunTestsInSeparateProcesses]` — the kernel is a process-global singleton and it wraps the composer autoloader.
 - Weaving fixtures must not be autoloaded before kernel init; keep them out of any eagerly-loaded code path.
+- Tests of a deployment (`aop:warmup` with a prebuilt cache, `aop:warmup-opcache`) run `tests/Fixtures/bin/console.php`, an artisan-like console, in processes of their own (`tests/ConsoleProcessTestCase.php`).

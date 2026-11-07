@@ -20,7 +20,7 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 - 🪡 **Transparent weaving** — aspects are applied by transforming classes at load time. No base classes to extend, no interfaces to implement, no `Proxy` wrappers to maintain, no changes to how you `new` or inject your services.
 - 🏷️ **Modern PHP 8 attributes** — advices are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]` right on your aspect methods, with a powerful regexp-like pointcut syntax (`execution(public App\Services\**->*(*))`).
 - 🧩 **Laravel-native integration** — package auto-discovery, publishable config, aspects resolved through the container (constructor DI works), registration via a simple config list or the `goaop.aspect` service tag, `php artisan about` support.
-- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup`; with `debug` off the woven code is served straight from cache and plays nicely with opcache.
+- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup` (in parallel workers, with an `opcache.preload` script on request); with `debug` off the woven code is served straight from cache and plays nicely with opcache.
 - 🔬 **Pure PHP, no magic runtime** — built on Go! AOP 4.x: no PECL extensions, no `eval()`, all transformations produce reviewable static PHP files.
 - ✅ **Proven by tests** — the bridge ships with end-to-end weaving tests (advice execution, `Around` return rewriting, cache generation) running against Laravel 12 and 13 on PHP 8.4.
 
@@ -28,7 +28,7 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 
 - PHP >= 8.4
 - Laravel 12 or 13
-- goaop/framework 4.x (attribute-based aspects)
+- goaop/framework ^4.0 (attribute-based aspects), installed with the bridge
 
 ## Installation
 
@@ -37,15 +37,6 @@ composer require goaop/goaop-laravel-bridge
 ```
 
 The service provider is registered automatically via package discovery.
-
-> **Note**
-> Until goaop/framework 4.0 is tagged, the bridge depends on the unreleased
-> `4.0-dev` line, so your application's `composer.json` needs:
->
-> ```json
-> "minimum-stability": "dev",
-> "prefer-stable": true
-> ```
 
 Publish the configuration if you want to tweak it:
 
