@@ -52,4 +52,3 @@ Tests use orchestra/testbench; weaving tests run in separate processes and write
 - Do not register the service provider as deferrable; AOP initialization must be eager.
 - Do not autoload weaving-test fixture classes before the kernel is initialized (no `use`-triggering references at file top level in test bootstrap).
 - Do not add `containerClass` back to the config with `Go\Core\GoAspectContainer` — that class was removed upstream; the framework default (`Go\Core\Container`) is correct.
-- The bridge requires the stable goaop/framework `^4.0`, and `symfony/console` `^7.4|^8.0` for the framework console classes it runs (`OpcacheWarmupCommand`, the warm-up output): do not bring back `minimum-stability: dev`. A framework feature that is not tagged yet is adopted once it is, with a raised `goaop/framework` constraint.
