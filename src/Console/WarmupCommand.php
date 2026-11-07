@@ -13,8 +13,8 @@ namespace Go\Laravel\GoAopBridge\Console;
 use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectKernel;
 use Go\Instrument\ClassLoading\CacheWarmer;
-use Go\Instrument\ClassLoading\Warmup\FileWarmer;
 use Illuminate\Console\Command;
+use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Warms up the Go! AOP proxy cache ahead of time (e.g. during deployment),
@@ -33,23 +33,48 @@ use Illuminate\Console\Command;
  * With "--cache-dir=DIR" the cache is built in another directory, from
  * scratch, while the kernel keeps serving this process from its own one:
  * the way a deployment prepares the cache of the next release.
+ *
+ * With "--preload[=FILE]" the opcache.preload script of the cache is written
+ * after a complete warm-up: "_preload.php" in the cache directory being built,
+ * or FILE.
  */
 class WarmupCommand extends Command
 {
-    protected $signature = 'aop:warmup
+    public const string NAME = 'aop:warmup';
+
+    protected $signature = self::NAME . '
                             {--fail-fast : Stop after the first file that fails to weave}
                             {--w|workers=1 : Number of parallel worker processes}
-                            {--cached-files=' . FileWarmer::DEFAULT_CACHED_FILES . ' : Number of parsed files each weaving process keeps in memory: more is faster, fewer uses less memory}
+                            {--cached-files= : Number of parsed files each weaving process keeps in memory: more is faster, fewer uses less memory (default: the "parsedFilesLimit" option)}
                             {--cache-dir= : Build the cache in this directory instead of the one of the kernel}';
 
     protected $description = 'Warm up the Go! AOP proxy cache for all weavable classes';
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Declared here rather than in the signature: its default (false) tells
+        // the option left out from the option given without a value (null)
+        $this->addOption(
+            'preload',
+            null,
+            InputOption::VALUE_OPTIONAL,
+            'Write the opcache.preload script of the cache, to this file or to _preload.php in the cache directory',
+            false
+        );
+    }
+
     public function handle(AspectKernel $aspectKernel): int
     {
         $workers     = $this->positiveIntegerOption('workers');
-        $cachedFiles = $this->positiveIntegerOption('cached-files');
+        // The explicit option wins, the parsedFilesLimit option of the kernel is the default
+        $cachedFiles = $this->option('cached-files') === null
+            ? $aspectKernel->getOptions()['parsedFilesLimit']
+            : $this->positiveIntegerOption('cached-files');
         $cacheDir    = $this->option('cache-dir');
         $cacheDir    = is_string($cacheDir) && $cacheDir !== '' ? $cacheDir : null;
+        $preloadFile = $this->preloadFileOption();
 
         $workerCommandLine = [];
         if ($workers > 1) {
@@ -66,7 +91,8 @@ class WarmupCommand extends Command
             $workers,
             $workerCommandLine,
             $cachedFiles,
-            $cacheDir
+            $cacheDir,
+            $preloadFile
         );
         $errors = $warmer->warmUp();
 
@@ -119,6 +145,24 @@ class WarmupCommand extends Command
         }
 
         return $commandLine;
+    }
+
+    /**
+     * Returns the path of the preload script to write, '' for the default one
+     * in the cache directory, or null when "--preload" was left out
+     */
+    private function preloadFileOption(): ?string
+    {
+        $preload = $this->option('preload');
+        if ($preload === false) {
+            return null;
+        }
+        if ($preload !== null && !is_string($preload)) {
+            throw InvalidConfigurationException::optionNotPath('preload');
+        }
+
+        // Without a value the script goes to the cache directory being built, which the warmer knows
+        return $preload ?? '';
     }
 
     /**

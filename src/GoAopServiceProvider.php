@@ -13,8 +13,11 @@ declare(strict_types=1);
 namespace Go\Laravel\GoAopBridge;
 
 use Go\Aop\Aspect;
+use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
+use Go\Instrument\ClassLoading\CachePathManager;
+use Go\Laravel\GoAopBridge\Console\OpcacheWarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupWorkerCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
@@ -23,6 +26,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Symfony\Component\Console\Input\ArgvInput;
 
 /**
  * Service provider for registration of Go! AOP framework
@@ -34,6 +38,12 @@ class GoAopServiceProvider extends ServiceProvider
         $this->mergeConfigFrom($this->configPath(), 'go_aop');
 
         $this->app->singleton(AspectKernel::class, function (): AspectKernel {
+            if ($this->isCacheBuildProcess()) {
+                // The application loads classes while it boots, before the warmup
+                // command runs: with a prebuilt cache, the ones the cache misses are
+                // served from their original source here instead of failing
+                CachePathManager::markBuildProcess();
+            }
             $kernel = AspectLaravelKernel::getInstance();
             $kernel->init($this->kernelOptions());
             $this->registerConfiguredAspects($kernel->getContainer());
@@ -60,7 +70,7 @@ class GoAopServiceProvider extends ServiceProvider
         $this->registerTaggedAspects();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([WarmupCommand::class, WarmupWorkerCommand::class]);
+            $this->commands([WarmupCommand::class, WarmupWorkerCommand::class, OpcacheWarmupCommand::class]);
 
             if (class_exists(AboutCommand::class)) {
                 AboutCommand::add('Go! AOP', function (): array {
@@ -73,6 +83,29 @@ class GoAopServiceProvider extends ServiceProvider
                 });
             }
         }
+    }
+
+    /**
+     * Whether this process runs "aop:warmup" or one of its workers, i.e. builds
+     * the AOP cache
+     *
+     * The kernel is initialized while the application boots, long before the
+     * console resolves the command, so the command name is read from the
+     * arguments of the process: the first one that is not an option, as the
+     * console reads it.
+     */
+    private function isCacheBuildProcess(): bool
+    {
+        if (!$this->app->runningInConsole()) {
+            return false;
+        }
+        $arguments = $_SERVER['argv'] ?? null;
+        if (!is_array($arguments)) {
+            return false;
+        }
+        $command = new ArgvInput(array_values(array_filter($arguments, is_string(...))))->getFirstArgument();
+
+        return in_array($command, [WarmupCommand::NAME, WarmupWorkerCommand::NAME], true);
     }
 
     /**
@@ -176,6 +209,7 @@ class GoAopServiceProvider extends ServiceProvider
      *     appDir: string,
      *     cacheDir: string|null,
      *     cacheFileMode?: int,
+     *     parsedFilesLimit?: positive-int,
      *     features: int,
      *     includePaths: list<string>,
      *     excludePaths: list<string>,
@@ -204,6 +238,16 @@ class GoAopServiceProvider extends ServiceProvider
         $cacheFileMode = $config->get('go_aop.cacheFileMode');
         if (is_int($cacheFileMode)) {
             $options['cacheFileMode'] = $cacheFileMode;
+        }
+        // Likewise for the parsed files limit. An int that is not positive is
+        // rejected like the kernel does: a mistyped GOAOP_PARSED_FILES_LIMIT
+        // casts to 0, which must not pass unnoticed.
+        $parsedFilesLimit = $config->get('go_aop.parsedFilesLimit');
+        if (is_int($parsedFilesLimit)) {
+            if ($parsedFilesLimit < 1) {
+                throw InvalidConfigurationException::invalidParsedFilesLimit($parsedFilesLimit);
+            }
+            $options['parsedFilesLimit'] = $parsedFilesLimit;
         }
 
         return $options;

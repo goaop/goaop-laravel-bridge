@@ -18,6 +18,7 @@ declare(strict_types=1);
  * the directory to build the cache in) and runs the same worker loop on it.
  */
 
+use Go\Instrument\ClassLoading\CachePathManager;
 use Go\Instrument\ClassLoading\Warmup\WarmupWorker;
 use Go\Laravel\GoAopBridge\GoAopServiceProvider;
 use Go\Laravel\GoAopBridge\Tests\Fixtures\LoggingAspect;
@@ -28,6 +29,10 @@ require __DIR__ . '/../../../vendor/autoload.php';
 
 [, $cacheDir, $cachedFiles] = $argv;
 $buildDir = $argv[3] ?? null;
+
+// The provider marks the process of "artisan aop:warmup-worker" as a build
+// process before the kernel starts; this script is not started that way
+CachePathManager::markBuildProcess();
 
 Application::create(
     resolvingCallback: static function (LaravelApplication $app) use ($cacheDir): void {

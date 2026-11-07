@@ -43,6 +43,7 @@ class GoAopServiceProviderTest extends TestCase
         $this->assertArrayHasKey('excludePaths', $config);
         $this->assertIsInt($config['features']);
         $this->assertIsInt($config['cacheFileMode']);
+        $this->assertSame(AspectKernel::DEFAULT_PARSED_FILES_LIMIT, $config['parsedFilesLimit']);
     }
 
     public function testKernelIsInitializedWithConfiguredOptions(): void
@@ -52,5 +53,6 @@ class GoAopServiceProviderTest extends TestCase
 
         $this->assertSame(static::aopCacheDir(), $options['cacheDir']);
         $this->assertTrue($options['debug']);
+        $this->assertSame(AspectKernel::DEFAULT_PARSED_FILES_LIMIT, $options['parsedFilesLimit']);
     }
 }

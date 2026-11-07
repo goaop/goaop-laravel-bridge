@@ -20,7 +20,7 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 - 🪡 **Transparent weaving** — aspects are applied by transforming classes at load time. No base classes to extend, no interfaces to implement, no `Proxy` wrappers to maintain, no changes to how you `new` or inject your services.
 - 🏷️ **Modern PHP 8 attributes** — advices are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]` right on your aspect methods, with a powerful regexp-like pointcut syntax (`execution(public App\Services\**->*(*))`).
 - 🧩 **Laravel-native integration** — package auto-discovery, publishable config, aspects resolved through the container (constructor DI works), registration via a simple config list or the `goaop.aspect` service tag, `php artisan about` support.
-- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup`; with `debug` off the woven code is served straight from cache and plays nicely with opcache.
+- 🚀 **Production-friendly** — pre-generate all proxies at deploy time with `php artisan aop:warmup` (in parallel workers, with an `opcache.preload` script on request); with `debug` off the woven code is served straight from cache and plays nicely with opcache.
 - 🔬 **Pure PHP, no magic runtime** — built on Go! AOP 4.x: no PECL extensions, no `eval()`, all transformations produce reviewable static PHP files.
 - ✅ **Proven by tests** — the bridge ships with end-to-end weaving tests (advice execution, `Around` return rewriting, cache generation) running against Laravel 12 and 13 on PHP 8.4.
 
@@ -28,7 +28,7 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 
 - PHP >= 8.4
 - Laravel 12 or 13
-- goaop/framework 4.x (attribute-based aspects)
+- goaop/framework ^4.0 (attribute-based aspects), installed with the bridge
 
 ## Installation
 
@@ -37,15 +37,6 @@ composer require goaop/goaop-laravel-bridge
 ```
 
 The service provider is registered automatically via package discovery.
-
-> **Note**
-> Until goaop/framework 4.0 is tagged, the bridge depends on the unreleased
-> `4.0-dev` line, so your application's `composer.json` needs:
->
-> ```json
-> "minimum-stability": "dev",
-> "prefer-stable": true
-> ```
 
 Publish the configuration if you want to tweak it:
 
@@ -128,9 +119,10 @@ Key options in `config/go_aop.php` (all overridable via env):
 | `appDir` | `base_path()` | Root directory the weaver may touch |
 | `cacheDir` | `storage_path('framework/aop')` (`GOAOP_CACHE_DIR`) | Where woven sources and proxies are cached |
 | `cacheFileMode` | `0770` (`GOAOP_CACHE_PERMISSIONS`, octal digits, e.g. `"770"`) | chmod for cache files |
+| `parsedFilesLimit` | `100` (`GOAOP_PARSED_FILES_LIMIT`) | Parsed source files (~0.2 MB each) kept in memory while weaving: more re-parses less, fewer uses less memory; the default of `aop:warmup --cached-files` |
 | `includePaths` | `[app_path()]` | Only these directories are woven |
 | `excludePaths` | `[]` | Never weave these |
-| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64; function and `new` interception is driven by pointcuts and needs no flag) |
+| `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64, `PARTIAL_REFLECTION` = 256; function and `new` interception is driven by pointcuts and needs no flag) |
 | `aspects` | `[]` | Aspect classes to auto-register |
 
 ## Deployment
@@ -149,7 +141,7 @@ Large applications are woven faster in parallel worker processes:
 php artisan aop:warmup --workers=8
 ```
 
-Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last 100 parsed files in memory; raise `--cached-files` to re-parse less, lower it to use less memory.
+Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last `parsedFilesLimit` parsed files in memory (100 by default); raise `--cached-files` to re-parse less, lower it to use less memory.
 
 To prepare the cache of a new release next to the running one, build it in another directory:
 
@@ -158,6 +150,24 @@ php artisan aop:warmup --cache-dir=/srv/app/releases/next/storage/framework/aop
 ```
 
 The kernel (and the workers) keep serving from their own directory while the other one is built from scratch, and a cache built this way is complete and location independent.
+
+With `--preload` the command also writes an [`opcache.preload`](https://www.php.net/manual/en/opcache.preloading.php) script of the cache after a complete warm-up: `_preload.php` in the cache directory being built, or the file given as `--preload=FILE`. Point `opcache.preload` (with `opcache.preload_user`) at it and every woven class is linked once when PHP starts instead of being loaded by each request:
+
+```bash
+php artisan aop:warmup --preload
+```
+
+To ship compiled scripts with a container image, prime the [`opcache.file_cache`](https://www.php.net/manual/en/opcache.configuration.php#ini.opcache.file-cache) after the warm-up, in the final image, with the PHP binary that serves the requests:
+
+```bash
+mkdir -p /var/cache/opcache && php -d opcache.enable_cli=1 -d opcache.file_cache_only=1 \
+    -d opcache.file_cache=/var/cache/opcache \
+    artisan aop:warmup-opcache --file-cache=/var/cache/opcache --entry=public/index.php --entry=artisan
+```
+
+`aop:warmup-opcache` is the framework's `cache:warmup:opcache` run on the kernel of the application: it compiles the AOP cache, Composer's class map and autoloaded files, the unwoven sources below the include paths and the `--entry` files. Compiled scripts land on disk only in a process started with these settings; without them the command fails and prints the command line to run.
+
+With `PREBUILT_CACHE` (`features` = 64) a request never weaves: a class below the include paths that the cache misses fails with a `WeavingException`, so run `aop:warmup` on every deployment. The command itself (and its workers) still boots the application before it weaves: the classes the application loads while it boots are served from their original source in that process, and woven into the cache by the build.
 
 `php artisan about` shows the current AOP cache location and debug mode.
 

@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace Go\Laravel\GoAopBridge\Tests;
 
+use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Tests\Fixtures\TestWorkerWarmupCommand;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -27,6 +28,7 @@ class ParallelWarmupCommandTest extends WeavingTestCase
     {
         parent::defineEnvironment($app);
 
+        $app['config']->set('go_aop.parsedFilesLimit', 7);
         $app->bind(WarmupCommand::class, TestWorkerWarmupCommand::class);
     }
 
@@ -42,6 +44,15 @@ class ParallelWarmupCommandTest extends WeavingTestCase
         $includeMap = (string) file_get_contents(static::aopCacheDir() . '/_include.cache');
         $this->assertStringContainsString('GreetingService.php', $includeMap);
         $this->assertStringContainsString('ReportGenerator.php', $includeMap, 'Files without matching advice are recorded as well');
+    }
+
+    public function testCachedFilesDefaultToTheParsedFilesLimitOption(): void
+    {
+        $this->assertSame(7, $this->app->make(AspectKernel::class)->getOptions()['parsedFilesLimit']);
+
+        $this->artisan('aop:warmup', ['--workers' => '2'])->assertSuccessful();
+
+        $this->assertSame('7', TestWorkerWarmupCommand::$commandLines[0][3]);
     }
 
     public function testCacheIsBuiltInAnotherDirectory(): void

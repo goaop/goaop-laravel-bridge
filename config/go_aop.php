@@ -64,6 +64,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Parsed Files Limit
+    |--------------------------------------------------------------------------
+    |
+    | Number of parsed source files (about 0.2 MB each) the engine keeps in
+    | memory while weaving: more re-parses less, fewer uses less memory.
+    | Must be a positive integer. It is also the default number of files
+    | kept by each process of "php artisan aop:warmup" (--cached-files).
+    |
+    */
+
+    'parsedFilesLimit' => (int) env('GOAOP_PARSED_FILES_LIMIT', 100),
+
+    /*
+    |--------------------------------------------------------------------------
     | Miscellaneous AOP Engine Features
     |--------------------------------------------------------------------------
     |
@@ -74,7 +88,11 @@ return [
     |       in legacy code (Features::INTERCEPT_INCLUDES).
     |   64 - do not check the cache presence and assume that cache
     |       is already prepared (Features::PREBUILT_CACHE), e.g. after
-    |       "php artisan aop:warmup" during deployment.
+    |       "php artisan aop:warmup" during deployment. A class below the
+    |       include paths that the cache misses then fails the request.
+    |   256 - weave classes whose parent class, interface or trait can not
+    |       be located by Composer (Features::PARTIAL_REFLECTION): members
+    |       inherited from a missing ancestor are not intercepted.
     |
     | Interception of system functions and of the "new" operator no longer
     | needs a feature flag: it is enabled by the registered pointcuts.

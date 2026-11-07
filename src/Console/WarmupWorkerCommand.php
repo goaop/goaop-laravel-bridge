@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 namespace Go\Laravel\GoAopBridge\Console;
 
-use Go\Instrument\ClassLoading\Warmup\FileWarmer;
+use Go\Core\AspectKernel;
 use Go\Instrument\ClassLoading\Warmup\WarmupWorker;
 use Illuminate\Console\Command;
 
@@ -29,19 +29,19 @@ class WarmupWorkerCommand extends Command
     public const string NAME = 'aop:warmup-worker';
 
     protected $signature = self::NAME . '
-                            {--cached-files=' . FileWarmer::DEFAULT_CACHED_FILES . ' : Number of parsed files kept in memory}
+                            {--cached-files= : Number of parsed files kept in memory (default: the "parsedFilesLimit" option)}
                             {--cache-dir= : Build the cache in this directory instead of the one of the kernel}';
 
     protected $description = 'Worker process of "aop:warmup", started by that command';
 
     protected $hidden = true;
 
-    public function handle(): int
+    public function handle(AspectKernel $aspectKernel): int
     {
         $cachedFiles = $this->option('cached-files');
         $cachedFiles = is_string($cachedFiles) && ctype_digit($cachedFiles) && (int) $cachedFiles > 0
             ? (int) $cachedFiles
-            : FileWarmer::DEFAULT_CACHED_FILES;
+            : $aspectKernel->getOptions()['parsedFilesLimit'];
         $cacheDir    = $this->option('cache-dir');
 
         // The worker boots its kernel by executing a loader file. The kernel of
