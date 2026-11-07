@@ -17,6 +17,7 @@ use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Instrument\ClassLoading\CachePathManager;
+use Go\Laravel\GoAopBridge\Console\OpcacheWarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupWorkerCommand;
 use Go\Laravel\GoAopBridge\Kernel\AspectLaravelKernel;
@@ -69,7 +70,7 @@ class GoAopServiceProvider extends ServiceProvider
         $this->registerTaggedAspects();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([WarmupCommand::class, WarmupWorkerCommand::class]);
+            $this->commands([WarmupCommand::class, WarmupWorkerCommand::class, OpcacheWarmupCommand::class]);
 
             if (class_exists(AboutCommand::class)) {
                 AboutCommand::add('Go! AOP', function (): array {

@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace Go\Laravel\GoAopBridge\Tests;
 
+use Go\Laravel\GoAopBridge\Console\OpcacheWarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
 use Go\Laravel\GoAopBridge\Console\WarmupWorkerCommand;
 use Illuminate\Contracts\Console\Kernel;
@@ -27,6 +28,19 @@ class WarmupWorkerCommandTest extends TestCase
         $this->assertArrayHasKey(WarmupWorkerCommand::NAME, $commands);
         $this->assertInstanceOf(WarmupWorkerCommand::class, $commands[WarmupWorkerCommand::NAME]);
         $this->assertTrue($commands[WarmupWorkerCommand::NAME]->isHidden(), 'The worker is started by aop:warmup, never by hand');
+    }
+
+    public function testOpcacheWarmupCommandRunsOnTheKernelOfTheApplication(): void
+    {
+        $commands = $this->app->make(Kernel::class)->all();
+
+        $this->assertArrayHasKey(OpcacheWarmupCommand::NAME, $commands);
+        $command = $commands[OpcacheWarmupCommand::NAME];
+        $this->assertInstanceOf(OpcacheWarmupCommand::class, $command);
+        $this->assertFalse($command->getDefinition()->hasArgument('loader'), 'The kernel is the one of the application');
+        $this->assertTrue($command->getDefinition()->hasOption('file-cache'));
+        $this->assertTrue($command->getDefinition()->hasOption('entry'));
+        $this->assertStringContainsString('artisan aop:warmup-opcache', $command->getProcessedHelp());
     }
 
     public function testWarmupCommandDeclaresTheParallelOptions(): void
