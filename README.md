@@ -166,6 +166,8 @@ With `--preload` the command also writes an [`opcache.preload`](https://www.php.
 php artisan aop:warmup --preload
 ```
 
+With `PREBUILT_CACHE` (`features` = 64) a request never weaves: a class below the include paths that the cache misses fails with a `WeavingException`, so run `aop:warmup` on every deployment. The command itself (and its workers) still boots the application before it weaves: the classes the application loads while it boots are served from their original source in that process, and woven into the cache by the build.
+
 `php artisan about` shows the current AOP cache location and debug mode.
 
 ## Caveats

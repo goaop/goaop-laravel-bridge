@@ -40,7 +40,9 @@ use Symfony\Component\Console\Input\InputOption;
  */
 class WarmupCommand extends Command
 {
-    protected $signature = 'aop:warmup
+    public const string NAME = 'aop:warmup';
+
+    protected $signature = self::NAME . '
                             {--fail-fast : Stop after the first file that fails to weave}
                             {--w|workers=1 : Number of parallel worker processes}
                             {--cached-files= : Number of parsed files each weaving process keeps in memory: more is faster, fewer uses less memory (default: the "parsedFilesLimit" option)}
