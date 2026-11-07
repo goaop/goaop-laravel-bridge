@@ -160,6 +160,12 @@ php artisan aop:warmup --cache-dir=/srv/app/releases/next/storage/framework/aop
 
 The kernel (and the workers) keep serving from their own directory while the other one is built from scratch, and a cache built this way is complete and location independent.
 
+With `--preload` the command also writes an [`opcache.preload`](https://www.php.net/manual/en/opcache.preloading.php) script of the cache after a complete warm-up: `_preload.php` in the cache directory being built, or the file given as `--preload=FILE`. Point `opcache.preload` (with `opcache.preload_user`) at it and every woven class is linked once when PHP starts instead of being loaded by each request:
+
+```bash
+php artisan aop:warmup --preload
+```
+
 `php artisan about` shows the current AOP cache location and debug mode.
 
 ## Caveats

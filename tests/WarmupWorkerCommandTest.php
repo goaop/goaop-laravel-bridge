@@ -38,5 +38,8 @@ class WarmupWorkerCommandTest extends TestCase
         $this->assertTrue($definition->hasOption('cached-files'));
         $this->assertTrue($definition->hasOption('cache-dir'));
         $this->assertTrue($definition->hasOption('fail-fast'));
+        $this->assertTrue($definition->hasOption('preload'));
+        $this->assertTrue($definition->getOption('preload')->isValueOptional());
+        $this->assertFalse($definition->getOption('preload')->getDefault(), 'Tells --preload left out from --preload without a value');
     }
 }
