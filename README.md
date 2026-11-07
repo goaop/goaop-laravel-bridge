@@ -128,6 +128,7 @@ Key options in `config/go_aop.php` (all overridable via env):
 | `appDir` | `base_path()` | Root directory the weaver may touch |
 | `cacheDir` | `storage_path('framework/aop')` (`GOAOP_CACHE_DIR`) | Where woven sources and proxies are cached |
 | `cacheFileMode` | `0770` (`GOAOP_CACHE_PERMISSIONS`, octal digits, e.g. `"770"`) | chmod for cache files |
+| `parsedFilesLimit` | `100` (`GOAOP_PARSED_FILES_LIMIT`) | Parsed source files (~0.2 MB each) kept in memory while weaving: more re-parses less, fewer uses less memory; the default of `aop:warmup --cached-files` |
 | `includePaths` | `[app_path()]` | Only these directories are woven |
 | `excludePaths` | `[]` | Never weave these |
 | `features` | `0` (`GOAOP_FEATURES`) | Bitmask of `Go\Aop\Features` engine features (`INTERCEPT_INCLUDES` = 4, `PREBUILT_CACHE` = 64; function and `new` interception is driven by pointcuts and needs no flag) |
@@ -149,7 +150,7 @@ Large applications are woven faster in parallel worker processes:
 php artisan aop:warmup --workers=8
 ```
 
-Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last 100 parsed files in memory; raise `--cached-files` to re-parse less, lower it to use less memory.
+Every worker is the application's own `artisan` running the hidden `aop:warmup-worker` command, so it boots with the same environment, configuration and aspects as the command itself (an `--env` option is passed on). The command hands the files out, merges the cache records of all workers and writes the cache metadata once at the end. Each weaving process keeps the last `parsedFilesLimit` parsed files in memory (100 by default); raise `--cached-files` to re-parse less, lower it to use less memory.
 
 To prepare the cache of a new release next to the running one, build it in another directory:
 

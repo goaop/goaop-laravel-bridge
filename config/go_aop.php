@@ -64,6 +64,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Parsed Files Limit
+    |--------------------------------------------------------------------------
+    |
+    | Number of parsed source files (about 0.2 MB each) the engine keeps in
+    | memory while weaving: more re-parses less, fewer uses less memory.
+    | Must be a positive integer. It is also the default number of files
+    | kept by each process of "php artisan aop:warmup" (--cached-files).
+    |
+    */
+
+    'parsedFilesLimit' => (int) env('GOAOP_PARSED_FILES_LIMIT', 100),
+
+    /*
+    |--------------------------------------------------------------------------
     | Miscellaneous AOP Engine Features
     |--------------------------------------------------------------------------
     |

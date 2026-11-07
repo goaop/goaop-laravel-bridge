@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Go\Laravel\GoAopBridge;
 
 use Go\Aop\Aspect;
+use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\Console\WarmupCommand;
@@ -176,6 +177,7 @@ class GoAopServiceProvider extends ServiceProvider
      *     appDir: string,
      *     cacheDir: string|null,
      *     cacheFileMode?: int,
+     *     parsedFilesLimit?: positive-int,
      *     features: int,
      *     includePaths: list<string>,
      *     excludePaths: list<string>,
@@ -204,6 +206,16 @@ class GoAopServiceProvider extends ServiceProvider
         $cacheFileMode = $config->get('go_aop.cacheFileMode');
         if (is_int($cacheFileMode)) {
             $options['cacheFileMode'] = $cacheFileMode;
+        }
+        // Likewise for the parsed files limit. An int that is not positive is
+        // rejected like the kernel does: a mistyped GOAOP_PARSED_FILES_LIMIT
+        // casts to 0, which must not pass unnoticed.
+        $parsedFilesLimit = $config->get('go_aop.parsedFilesLimit');
+        if (is_int($parsedFilesLimit)) {
+            if ($parsedFilesLimit < 1) {
+                throw InvalidConfigurationException::invalidParsedFilesLimit($parsedFilesLimit);
+            }
+            $options['parsedFilesLimit'] = $parsedFilesLimit;
         }
 
         return $options;

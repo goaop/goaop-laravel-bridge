@@ -13,7 +13,6 @@ namespace Go\Laravel\GoAopBridge\Console;
 use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectKernel;
 use Go\Instrument\ClassLoading\CacheWarmer;
-use Go\Instrument\ClassLoading\Warmup\FileWarmer;
 use Illuminate\Console\Command;
 
 /**
@@ -39,7 +38,7 @@ class WarmupCommand extends Command
     protected $signature = 'aop:warmup
                             {--fail-fast : Stop after the first file that fails to weave}
                             {--w|workers=1 : Number of parallel worker processes}
-                            {--cached-files=' . FileWarmer::DEFAULT_CACHED_FILES . ' : Number of parsed files each weaving process keeps in memory: more is faster, fewer uses less memory}
+                            {--cached-files= : Number of parsed files each weaving process keeps in memory: more is faster, fewer uses less memory (default: the "parsedFilesLimit" option)}
                             {--cache-dir= : Build the cache in this directory instead of the one of the kernel}';
 
     protected $description = 'Warm up the Go! AOP proxy cache for all weavable classes';
@@ -47,7 +46,10 @@ class WarmupCommand extends Command
     public function handle(AspectKernel $aspectKernel): int
     {
         $workers     = $this->positiveIntegerOption('workers');
-        $cachedFiles = $this->positiveIntegerOption('cached-files');
+        // The explicit option wins, the parsedFilesLimit option of the kernel is the default
+        $cachedFiles = $this->option('cached-files') === null
+            ? $aspectKernel->getOptions()['parsedFilesLimit']
+            : $this->positiveIntegerOption('cached-files');
         $cacheDir    = $this->option('cache-dir');
         $cacheDir    = is_string($cacheDir) && $cacheDir !== '' ? $cacheDir : null;
 

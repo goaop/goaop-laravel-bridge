@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace Go\Laravel\GoAopBridge\Tests;
 
 use Go\Aop\Aspect;
+use Go\Aop\Exception\InvalidConfigurationException;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\GoAopServiceProvider;
 use Go\Laravel\GoAopBridge\Tests\Fixtures\EmptyAspect;
@@ -53,6 +54,17 @@ class AspectConfigValidationTest extends TestCase
             stdClass::class,
             Aspect::class
         ));
+
+        $this->bootProvider();
+    }
+
+    public function testParsedFilesLimitMustBePositive(): void
+    {
+        // What a mistyped GOAOP_PARSED_FILES_LIMIT casts to
+        $this->app['config']->set('go_aop.parsedFilesLimit', 0);
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('Option "parsedFilesLimit" must be a positive integer, got 0.');
 
         $this->bootProvider();
     }
