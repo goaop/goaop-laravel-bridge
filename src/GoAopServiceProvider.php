@@ -136,6 +136,8 @@ class GoAopServiceProvider extends ServiceProvider
         $aspectContainer->setDelegate($this->app);
 
         foreach ($this->configuredAspectClasses() as $aspectClass) {
+            // Not loaded to be checked here: the factory checks the aspect it creates
+            /** @var class-string<Aspect> $aspectClass */
             $aspectContainer->addLazyService(
                 $aspectClass,
                 function () use ($aspectClass): Aspect {
