@@ -15,7 +15,9 @@ service provider initializes the kernel while it boots, before a command runs.
   as its "loader", so that nothing else is executed. `--cached-files` defaults to the `parsedFilesLimit` option too.
 - `OpcacheWarmupCommand.php` — `aop:warmup-opcache`: the framework's `Go\Console\Command\OpcacheWarmupCommand`
   (`cache:warmup:opcache`, primes `opcache.file_cache`) renamed into the `aop:` namespace, with the `loader` argument
-  dropped and the kernel of the application injected (`loadAspectKernel()` is a no-op).
+  dropped and the kernel of the application injected (`loadAspectKernel()` is a no-op). The files of Laravel
+  (`public/index.php`, `artisan`, `bootstrap/` with the `getCached*Path()` caches, `config/`, `routes/`) are appended
+  to the `--entry` files, deduplicated by real path, so they must compile like the entry points.
 
 ## Tests
 
