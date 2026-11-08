@@ -157,15 +157,16 @@ With `--preload` the command also writes an [`opcache.preload`](https://www.php.
 php artisan aop:warmup --preload
 ```
 
-To ship compiled scripts with a container image, prime the [`opcache.file_cache`](https://www.php.net/manual/en/opcache.configuration.php#ini.opcache.file-cache) after the warm-up, in the final image, with the PHP binary that serves the requests:
+To ship compiled scripts with a container image, prime the [`opcache.file_cache`](https://www.php.net/manual/en/opcache.configuration.php#ini.opcache.file-cache) after the warm-up and after `php artisan optimize`, in the final image, with the PHP binary that serves the requests:
 
 ```bash
+php artisan optimize
 mkdir -p /var/cache/opcache && php -d opcache.enable_cli=1 -d opcache.file_cache_only=1 \
     -d opcache.file_cache=/var/cache/opcache \
-    artisan aop:warmup-opcache --file-cache=/var/cache/opcache --entry=public/index.php --entry=artisan
+    artisan aop:warmup-opcache --file-cache=/var/cache/opcache
 ```
 
-`aop:warmup-opcache` is the framework's `cache:warmup:opcache` run on the kernel of the application: it compiles the AOP cache, Composer's class map and autoloaded files, the unwoven sources below the include paths and the `--entry` files. Compiled scripts land on disk only in a process started with these settings; without them the command fails and prints the command line to run.
+`aop:warmup-opcache` is the framework's `cache:warmup:opcache` run on the kernel of the application: it compiles the AOP cache, Composer's class map and autoloaded files, the unwoven sources below the include paths, the files of Laravel and the `--entry` files. The files of Laravel are `public/index.php`, `artisan`, every PHP file below `bootstrap/` (with the caches written by `optimize`: `config.php`, `services.php`, `packages.php`, `routes-v7.php`, `events.php`, also when `APP_CONFIG_CACHE` and friends move them elsewhere), `config/` and `routes/`; pass `--entry` for any other file a request includes. Compiled scripts land on disk only in a process started with these settings; without them the command fails and prints the command line to run.
 
 With `PREBUILT_CACHE` (`features` = 64) a request never weaves: a class below the include paths that the cache misses fails with a `WeavingException`, so run `aop:warmup` on every deployment. The command itself (and its workers) still boots the application before it weaves: the classes the application loads while it boots are served from their original source in that process, and woven into the cache by the build.
 
