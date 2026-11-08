@@ -169,7 +169,7 @@ mkdir -p /var/cache/opcache && php -d opcache.enable_cli=1 -d opcache.file_cache
 
 With `PREBUILT_CACHE` (`features` = 64) a request never weaves: a class below the include paths that the cache misses fails with a `WeavingException`, so run `aop:warmup` on every deployment. The command itself (and its workers) still boots the application before it weaves: the classes the application loads while it boots are served from their original source in that process, and woven into the cache by the build.
 
-The configured aspects are not loaded when the kernel starts, so the other artisan commands of a deployment run before the cache is built, as long as they load no class below the include paths. A deployment with `GOAOP_FEATURES=64` in its environment runs in the natural order:
+Laravel's cache commands (`package:discover`, which `composer install` runs, `optimize`, `optimize:clear` and the `config`, `event`, `route` and `view` `:cache`/`:clear` commands they run) are treated the same way: they write caches and serve no request, so the classes the application loads while it boots (event discovery reflects the listeners) are served from their original source there. The configured aspects are not loaded when the kernel starts. Any other command, and every request, still fails on a class the cache misses. A deployment with `GOAOP_FEATURES=64` in its environment therefore runs in the natural order:
 
 ```bash
 composer install --no-dev --optimize-autoloader   # runs package:discover, with an empty AOP cache
