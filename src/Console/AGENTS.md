@@ -25,6 +25,8 @@ service provider initializes the kernel while it boots, before a command runs.
   itself (`CachePathManager::markBuildProcess()`).
 - `tests/PrebuiltCacheWarmupTest.php` runs `tests/Fixtures/bin/console.php`, an artisan-like console with a prebuilt
   cache, to check that `aop:warmup` (in process and with workers) builds a cache the application loads classes of
-  while it boots.
+  while it boots, and that other commands run before the cache is built. One of its aspects lies below the include
+  paths (`tests/Fixtures/App`); environment variables of the console are described at the top of the script. A test
+  running `optimize` must run `optimize:clear` afterwards: the testbench skeleton is shared by every test.
 - `tests/OpcacheWarmupCommandTest.php` runs `aop:warmup-opcache` end to end, in processes started with the file cache
   settings.

@@ -14,6 +14,7 @@ namespace Go\Laravel\GoAopBridge;
 
 use Go\Aop\Aspect;
 use Go\Aop\Exception\InvalidConfigurationException;
+use Go\Aop\Features;
 use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Instrument\ClassLoading\CachePathManager;
@@ -38,15 +39,25 @@ class GoAopServiceProvider extends ServiceProvider
         $this->mergeConfigFrom($this->configPath(), 'go_aop');
 
         $this->app->singleton(AspectKernel::class, function (): AspectKernel {
-            if ($this->isCacheBuildProcess()) {
+            $isCacheBuildProcess = $this->isCacheBuildProcess();
+            if ($isCacheBuildProcess) {
                 // The application loads classes while it boots, before the warmup
                 // command runs: with a prebuilt cache, the ones the cache misses are
                 // served from their original source here instead of failing
                 CachePathManager::markBuildProcess();
             }
-            $kernel = AspectLaravelKernel::getInstance();
-            $kernel->init($this->kernelOptions());
+            $options = $this->kernelOptions();
+            $kernel  = AspectLaravelKernel::getInstance();
+            $kernel->init($options);
             $this->registerConfiguredAspects($kernel->getContainer());
+            // Checking an aspect class loads it. Outside a build this is only done
+            // in debug mode, where weaving loads the aspects anyway: a production
+            // request must not include every aspect file at kernel start, and with
+            // a prebuilt cache a class the cache misses would fail the process
+            $isPrebuiltCache = ($options['features'] & Features::PREBUILT_CACHE) !== 0;
+            if ($isCacheBuildProcess || ($options['debug'] && !$isPrebuiltCache)) {
+                $this->validateConfiguredAspectClasses();
+            }
 
             return $kernel;
         });
@@ -113,28 +124,46 @@ class GoAopServiceProvider extends ServiceProvider
      * deferred services of the aspect container, right after the kernel is
      * initialized.
      *
-     * Weaving only needs the aspect classes, so no aspect is created here:
-     * each one is resolved through the Laravel container on the first call
-     * of one of its advices, when the application is fully booted and every
-     * constructor dependency is available. The Laravel container is attached
-     * as the PSR-11 delegate of the aspect container for the same reason.
+     * Weaving only needs the aspect classes, so no aspect is created here, and
+     * no aspect class is loaded either: each aspect is resolved through the
+     * Laravel container on the first call of one of its advices, when the
+     * application is fully booted and every constructor dependency is
+     * available. The Laravel container is attached as the PSR-11 delegate of
+     * the aspect container for the same reason.
      */
     private function registerConfiguredAspects(AspectContainer $aspectContainer): void
     {
         $aspectContainer->setDelegate($this->app);
 
         foreach ($this->configuredAspectClasses() as $aspectClass) {
-            if (!is_subclass_of($aspectClass, Aspect::class)) {
-                throw new InvalidArgumentException(sprintf(
-                    'Aspect "%s" must implement the "%s" interface.',
-                    $aspectClass,
-                    Aspect::class
-                ));
-            }
             $aspectContainer->addLazyService(
                 $aspectClass,
-                fn (): Aspect => $this->app->make($aspectClass)
+                function () use ($aspectClass): Aspect {
+                    $aspect = $this->app->make($aspectClass);
+                    if (!$aspect instanceof Aspect) {
+                        throw $this->notAnAspect(get_debug_type($aspect));
+                    }
+
+                    return $aspect;
+                }
             );
+        }
+    }
+
+    /**
+     * Checks that every class of the "go_aop.aspects" config list is an aspect,
+     * which loads the classes
+     *
+     * An entry that is not an aspect is never woven: unchecked, it would be
+     * ignored without notice. "aop:warmup" checks the list, so a deployment
+     * fails on it, and so does a process in debug mode.
+     */
+    private function validateConfiguredAspectClasses(): void
+    {
+        foreach ($this->configuredAspectClasses() as $aspectClass) {
+            if (!is_subclass_of($aspectClass, Aspect::class)) {
+                throw $this->notAnAspect($aspectClass);
+            }
         }
     }
 
@@ -154,17 +183,25 @@ class GoAopServiceProvider extends ServiceProvider
 
         foreach ($this->app->tagged('goaop.aspect') as $aspect) {
             if (!$aspect instanceof Aspect) {
-                throw new InvalidArgumentException(sprintf(
-                    'Aspect "%s" must implement the "%s" interface.',
-                    get_debug_type($aspect),
-                    Aspect::class
-                ));
+                throw $this->notAnAspect(get_debug_type($aspect));
             }
             if (!isset($registered[$aspect::class])) {
                 $aspectContainer->add($aspect::class, $aspect);
                 $registered[$aspect::class] = true;
             }
         }
+    }
+
+    /**
+     * Returns the exception for a class registered as an aspect that does not implement the Aspect interface
+     */
+    private function notAnAspect(string $className): InvalidArgumentException
+    {
+        return new InvalidArgumentException(sprintf(
+            'Aspect "%s" must implement the "%s" interface.',
+            $className,
+            Aspect::class
+        ));
     }
 
     /**

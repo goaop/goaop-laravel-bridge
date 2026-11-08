@@ -86,7 +86,7 @@ See the Go! AOP documentation on [core concepts](https://github.com/goaop/framew
 
 You never register aspects with the AOP engine manually. During the application's boot phase — after all service providers have registered, before your application code runs — the bridge collects aspects from two sources and hands each of them to the engine's aspect container:
 
-1. **The `go_aop.aspects` config list.** Every class listed here is registered with the engine as soon as the AOP kernel starts, before any service provider boots, and resolved through the Laravel service container on the first call of one of its advices. Constructor dependency injection works out of the box, and an aspect may depend on services that only become available once the application has fully booted:
+1. **The `go_aop.aspects` config list.** Every class listed here is registered with the engine as soon as the AOP kernel starts, before any service provider boots, without loading the class, and resolved through the Laravel service container on the first call of one of its advices. Constructor dependency injection works out of the box, and an aspect may depend on services that only become available once the application has fully booted:
 
    ```php
    // config/go_aop.php
@@ -107,7 +107,7 @@ You never register aspects with the AOP engine manually. During the application'
 
    Tagged services are resolved when the bridge's provider boots (a Laravel tag can only be enumerated by resolving its services), so prefer the config list for aspects with heavy or boot-dependent constructors.
 
-Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails fast with a descriptive exception. The Laravel container is attached to the engine's aspect container as its PSR-11 delegate, so advices and aspect factories can look up application services through it. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
+Both sources can be combined; duplicates are registered only once. Every discovered class must implement `Go\Aop\Aspect`, otherwise the bridge fails with a descriptive exception: a tagged service when the provider boots, a class of the config list when `aop:warmup` runs, in debug mode when the kernel starts, and otherwise when the aspect is resolved. The Laravel container is attached to the engine's aspect container as its PSR-11 delegate, so advices and aspect factories can look up application services through it. Once registered, the engine reads the `#[Before]`/`#[After]`/`#[Around]`/`#[AfterThrowing]` attributes from the aspect's methods and weaves the advices into every class matched by their pointcut expressions as it is loaded (or ahead of time via [`aop:warmup`](#deployment)).
 
 ## Configuration
 
@@ -168,6 +168,16 @@ mkdir -p /var/cache/opcache && php -d opcache.enable_cli=1 -d opcache.file_cache
 `aop:warmup-opcache` is the framework's `cache:warmup:opcache` run on the kernel of the application: it compiles the AOP cache, Composer's class map and autoloaded files, the unwoven sources below the include paths and the `--entry` files. Compiled scripts land on disk only in a process started with these settings; without them the command fails and prints the command line to run.
 
 With `PREBUILT_CACHE` (`features` = 64) a request never weaves: a class below the include paths that the cache misses fails with a `WeavingException`, so run `aop:warmup` on every deployment. The command itself (and its workers) still boots the application before it weaves: the classes the application loads while it boots are served from their original source in that process, and woven into the cache by the build.
+
+The configured aspects are not loaded when the kernel starts, so the other artisan commands of a deployment run before the cache is built, as long as they load no class below the include paths. A deployment with `GOAOP_FEATURES=64` in its environment runs in the natural order:
+
+```bash
+composer install --no-dev --optimize-autoloader   # runs package:discover, with an empty AOP cache
+php artisan optimize                               # the cached configuration carries GOAOP_FEATURES
+php artisan aop:warmup
+```
+
+Once the configuration is cached, `env()` is not read any more: run `optimize` (or `config:cache`) with the production environment, `GOAOP_FEATURES` included.
 
 `php artisan about` shows the current AOP cache location and debug mode.
 
