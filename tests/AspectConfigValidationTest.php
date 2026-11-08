@@ -12,6 +12,7 @@ namespace Go\Laravel\GoAopBridge\Tests;
 
 use Go\Aop\Aspect;
 use Go\Aop\Exception\InvalidConfigurationException;
+use Go\Core\AspectContainer;
 use Go\Core\AspectKernel;
 use Go\Laravel\GoAopBridge\GoAopServiceProvider;
 use Go\Laravel\GoAopBridge\Tests\Fixtures\EmptyAspect;
@@ -56,6 +57,36 @@ class AspectConfigValidationTest extends TestCase
         ));
 
         $this->bootProvider();
+    }
+
+    /**
+     * Outside debug mode the configured classes are not loaded when the kernel
+     * starts: a class that is not an aspect fails when it is resolved
+     */
+    public function testConfiguredAspectIsCheckedWhenResolvedOutsideDebugMode(): void
+    {
+        $this->app['config']->set('go_aop.debug', false);
+        $this->app['config']->set('go_aop.aspects', [stdClass::class]);
+        $this->bootProvider();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(sprintf(
+            'Aspect "%s" must implement the "%s" interface.',
+            stdClass::class,
+            Aspect::class
+        ));
+
+        $this->app->make(AspectContainer::class)->get(stdClass::class);
+    }
+
+    public function testConfiguredAspectClassesAreNotLoadedOutsideDebugMode(): void
+    {
+        $this->app['config']->set('go_aop.debug', false);
+        $this->app['config']->set('go_aop.aspects', ['Go\\Laravel\\GoAopBridge\\Tests\\Fixtures\\MissingAspect']);
+
+        $this->bootProvider();
+
+        $this->assertTrue($this->app->make(AspectContainer::class)->has('Go\\Laravel\\GoAopBridge\\Tests\\Fixtures\\MissingAspect'));
     }
 
     public function testParsedFilesLimitMustBePositive(): void

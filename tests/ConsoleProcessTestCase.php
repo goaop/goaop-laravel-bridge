@@ -24,6 +24,13 @@ abstract class ConsoleProcessTestCase extends PHPUnitTestCase
 {
     protected string $cacheDir;
 
+    /**
+     * Environment variables of the console processes, on top of the ones of this process
+     *
+     * @var array<string, string>
+     */
+    protected array $environment = [];
+
     protected function setUp(): void
     {
         $this->cacheDir = sys_get_temp_dir() . '/goaop-laravel-bridge-tests/prebuilt-' . getmypid();
@@ -54,7 +61,7 @@ abstract class ConsoleProcessTestCase extends PHPUnitTestCase
             [1 => ['pipe', 'w'], 2 => ['redirect', 1]],
             $pipes,
             null,
-            ['GOAOP_TEST_CACHE_DIR' => $this->cacheDir] + getenv()
+            ['GOAOP_TEST_CACHE_DIR' => $this->cacheDir] + $this->environment + getenv()
         );
         $this->assertIsResource($process);
         $output = (string) stream_get_contents($pipes[1]);
