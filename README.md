@@ -53,7 +53,7 @@ If you have written a middleware's `handle($request, $next)`, you already know t
 
 ## Why behaviors in Laravel?
 
-Some logic doesn't belong to any single class, yet ends up copied into hundreds of them: logging, caching, metrics, transactions, authorization checks, rate limiting, retry policies. Laravel's middleware solves this for HTTP requests. Behaviors solve it for **any method in your codebase**: define the behavior once, select the methods with a matching rule (by attribute, name, namespace or visibility), and the engine attaches it as the classes load.
+Some logic doesn't belong to any single class, yet ends up copied into hundreds of them: logging, caching, metrics, transactions, authorization checks, rate limiting, retry policies. Laravel's middleware solves this for HTTP requests. Behaviors solve it for **any method or property in your codebase**, public, protected or private: define the behavior once, select the methods and properties with a matching rule (by attribute, name, namespace or visibility), and the engine attaches it as the classes load.
 
 ### It feels like part of Laravel
 
@@ -67,10 +67,12 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 
 - **Every instance gets the behavior.** Behaviors are attached to the class itself while it loads, so objects from the container and objects you create with `new` behave the same. Type hints, `instanceof` and the class name are unchanged: no wrapper object exists.
 - **Every kind of method qualifies.** Private, protected, `final` and static methods, and methods of `final` and `readonly` classes.
+- **Properties too.** Reads and writes of public, protected and private properties, constructor-promoted ones included, through native PHP 8.4 property hooks: `access(private App\Domain\Order->status)` or `@access(App\Attributes\Audited)`.
+
 ### Built on solid ground
 
 - **Modern PHP 8 attributes.** Behaviors are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]`, with an expressive matching-rule syntax (`execution(public App\Services\**->*(*))`, `@execution(App\Attributes\Transactional)`).
-- **Small cost.** Methods without behaviors cost nothing extra; a method with a behavior pays under 1 µs per call ([measured costs](https://aopphp.com/docs/production/#cost-per-call)).
+- **Small cost.** Methods and properties without behaviors cost nothing extra; a method or property with a behavior pays under 1 µs per call ([measured costs](https://aopphp.com/docs/production/#cost-per-call)).
 - **Pure PHP, no magic runtime.** No PECL extensions, no `eval()`: the compiled classes are static PHP files you can read and review.
 - **Proven by tests.** The bridge ships with end-to-end tests (behavior execution, `Around` return values, class extensions, cache generation, parallel warm-up) running against Laravel 12 and 13 on PHP 8.4.
 
