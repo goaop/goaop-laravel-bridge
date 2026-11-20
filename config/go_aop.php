@@ -12,12 +12,11 @@ return [
 
     /*
      |--------------------------------------------------------------------------
-     | AOP Debug Mode
+     | Debug Mode
      |--------------------------------------------------------------------------
      |
-     | When AOP is in debug mode, then breakpoints in the original source
-     | code will work. Also engine will refresh cache files if the original
-     | files were changed.
+     | In debug mode, breakpoints in the original source code work, and the
+     | engine compiles a class again when its original file changes.
      |
      | For production mode, no extra filemtime checks and better
      | integration with opcache.
@@ -31,7 +30,7 @@ return [
     | Application Root Directory
     |--------------------------------------------------------------------------
     |
-    | AOP will be applied only to the files in this directory, change it
+    | Behaviors are attached only to classes in this directory, change it
     | to app_path() if needed.
     |
     */
@@ -40,11 +39,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AOP Cache Directory
+    | Cache Directory
     |--------------------------------------------------------------------------
     |
-    | AOP engine will put all transformed files and caches in that directory.
-    | Use "php artisan aop:warmup" to pre-generate proxies during deployment.
+    | The engine puts all compiled files and caches in this directory.
+    | Use "php artisan aop:warmup" to build the cache during deployment.
     |
     */
 
@@ -68,7 +67,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Number of parsed source files (about 0.2 MB each) the engine keeps in
-    | memory while weaving: more re-parses less, fewer uses less memory.
+    | memory while compiling: more re-parses less, fewer uses less memory.
     | Must be a positive integer. It is also the default number of files
     | kept by each process of "php artisan aop:warmup" (--cached-files).
     |
@@ -78,7 +77,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Miscellaneous AOP Engine Features
+    | Miscellaneous Engine Features
     |--------------------------------------------------------------------------
     |
     | This option should contain a bitmask of values defined in
@@ -90,12 +89,12 @@ return [
     |       is already prepared (Features::PREBUILT_CACHE), e.g. after
     |       "php artisan aop:warmup" during deployment. A class below the
     |       include paths that the cache misses then fails the request.
-    |   256 - weave classes whose parent class, interface or trait can not
+    |   256 - compile classes whose parent class, interface or trait can not
     |       be located by Composer (Features::PARTIAL_REFLECTION): members
     |       inherited from a missing ancestor are not intercepted.
     |
-    | Interception of system functions and of the "new" operator no longer
-    | needs a feature flag: it is enabled by the registered pointcuts.
+    | Behaviors on system functions and on the "new" operator no longer
+    | need a feature flag: their matching rules (pointcuts) enable them.
     | Unknown bits (such as the former 1 and 2) are rejected by the engine.
     |
     | <code>
@@ -115,8 +114,8 @@ return [
     | Directories White List
     |--------------------------------------------------------------------------
     |
-    | AOP will check this list to apply an AOP to selected directories only,
-    | leave it empty if you want AOP to be applied to all files in the appDir.
+    | Behaviors are attached only to classes in these directories; leave
+    | it empty to compile all files in the appDir.
     |
     */
 
@@ -129,9 +128,9 @@ return [
     | Directories Black List
     |--------------------------------------------------------------------------
     |
-    | AOP will check this list to disable AOP for selected directories,
-    | e.g. paths holding classes that must never be proxied (exception
-    | handlers, the aspects themselves, generated code, ...).
+    | Classes in these directories never get behaviors, e.g. paths holding
+    | classes that must never be proxied (exception handlers, the behavior
+    | classes themselves, generated code, ...).
     |
     */
 
@@ -139,14 +138,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Aspects
+    | Behavior Classes
     |--------------------------------------------------------------------------
     |
-    | List of aspect classes (implementing \Go\Aop\Aspect, with advice
-    | methods declared via PHP attributes such as #[Before], #[After],
-    | #[Around] and #[AfterThrowing]) that should be registered
-    | automatically. Aspects are resolved through the Laravel container,
-    | so they can use constructor dependency injection.
+    | List of behavior classes (aspects: classes implementing
+    | \Go\Aop\Aspect, with behaviors declared via PHP attributes such as
+    | #[Before], #[After], #[Around] and #[AfterThrowing]) that should be
+    | registered automatically. They are resolved through the Laravel
+    | container, so they can use constructor dependency injection.
     |
     | Alternatively (or additionally), tag any service with "goaop.aspect"
     | in one of your service providers.

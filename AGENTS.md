@@ -48,6 +48,10 @@ Tests use orchestra/testbench; weaving tests run in separate processes and write
 - PR titles must themselves be valid conventional commit subjects — CI enforces this (`.github/workflows/lint-pr.yml`).
 - See `CONTRIBUTING.md` for the full contributor workflow.
 
+## Documentation language
+
+User-facing text (README, config comments, package description) follows the language of [aopphp.com](https://aopphp.com/docs/behaviors/#terms-on-this-page): it speaks of **behaviors** as *middleware for any method*, not of AOP. Behavior class = aspect, behavior = advice, matching rule = pointcut, compile step = weaving; name the API term once next to the everyday word. Code, class names, config keys (`aspects`), the `goaop.aspect` tag, command names and exception names keep the API names. This file and code comments stay technical.
+
 ## Things agents get wrong here
 
 - Do not register the service provider as deferrable; AOP initialization must be eager.

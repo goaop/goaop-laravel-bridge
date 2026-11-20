@@ -1,8 +1,8 @@
 {
     "name": "goaop/goaop-laravel-bridge",
-    "description": "Integration bridge for Go! AOP framework",
+    "description": "Middleware for any method of your Laravel application: declarative behaviors with PHP attributes, powered by Go! AOP",
     "type": "library",
-    "keywords": ["bridge", "laravel", "aop", "php", "aspect"],
+    "keywords": ["bridge", "laravel", "middleware", "behavior", "attributes", "aop", "php", "aspect"],
     "license": "MIT",
     "authors": [
         {
