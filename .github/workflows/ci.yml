@@ -14,6 +14,11 @@ jobs:
       matrix:
         php: ['8.4', '8.5', '8.6']
         laravel: ['12', '13']
+        exclude:
+          # Laravel 12 does not support PHP 8.6: its container calls spl_object_hash() (deprecated in 8.6) for every
+          # closure binding, also while its error handler reports that deprecation, which PHP then prints
+          - php: '8.6'
+            laravel: '12'
     steps:
       - uses: actions/checkout@v7
 
