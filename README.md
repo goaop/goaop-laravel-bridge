@@ -74,7 +74,7 @@ Some logic doesn't belong to any single class, yet ends up copied into hundreds 
 - **Native PHP attributes.** Behaviors are declared with `#[Before]`, `#[After]`, `#[Around]` and `#[AfterThrowing]`, with an expressive matching-rule syntax (`execution(public App\Services\**->*(*))`, `@execution(App\Attributes\Transactional)`).
 - **Small cost.** Methods and properties without behaviors cost nothing extra; a method or property with a behavior pays under 1 µs per call ([measured costs](https://aopphp.com/docs/production/#cost-per-call)).
 - **Pure PHP, no magic runtime.** No PECL extensions, no `eval()`: the compiled classes are static PHP files you can read and review.
-- **Proven by tests.** The bridge ships with end-to-end tests (behavior execution, `Around` return values, class extensions, cache generation, parallel warm-up) running against Laravel 12 and 13 on PHP 8.4+ (CI covers 8.4 and 8.5).
+- **Proven by tests.** The bridge ships with end-to-end tests (behavior execution, `Around` return values, class extensions, cache generation, parallel warm-up) running against Laravel 12 and 13 on PHP 8.4+ (CI covers 8.4, 8.5 and 8.6, PHP 8.6 with Laravel 13).
 
 ## Requirements
 
